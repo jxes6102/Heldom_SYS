@@ -1,0 +1,147 @@
+﻿@* stylesheet *@
+<link rel="stylesheet" href="~/css/Profile/Index.css" asp-append-version="true" />
+@* https://localhost:7142/Profile/Index *@
+
+<div id="loading" style="display: none;">Loading...</div>
+<div class="main_wrap border-radius box-shadow" id="profileContainer" style="display: none;">
+    <div class="profile-card">
+        <div class="profile-block pd-40">
+            <!-- 頭像與基本資訊 -->
+            <div class="obj-center ">
+                <div class="profile-info" id="profile-info">
+                    <div class="obj-center pro-imgPD">
+                        <img id="ProfileImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0Jo-Zc-Hu7svz7o5YQQCGShFYdZ2-IJscfw&s" alt="Profile Image" class="profile-image">
+
+                    </div>
+                    @*姓名、Email*@
+                </div>
+            </div>
+
+            <!-- 年資與特休 -->
+            <div class="stats">
+                <div class="stat">
+                    <h1 class="stat-number" id="yearsOfService">10</h1>
+                    <p class="stat-label bold">到職年資</p>
+                </div>
+                <div class="stat">
+                    <h1 class="stat-number" id="leaveDays">90</h1>
+                    <p class="stat-label bold">特休天數</p>
+                </div>
+            </div>
+            <!-- 編輯按鈕 -->
+            <div class="edit-button color-blue">
+                <button class="txt-center" id="towardSettings"><p class="bold">編輯</p></button>
+            </div>
+        </div>
+        <!-- 主要資訊 -->
+        <div class="profile-block" style="width: 75%;">
+            <div class="details">
+                <div class="contact-row">
+                    <div class="contact-col contact-block"><p class="content-title">到職日</p><p class="content-content bold" id="hireDate">2025/02/20</p></div>
+                    <div class="contact-col contact-block"><p class="content-title">職稱</p><p class="content-content bold" id="position">技士</p></div>
+                    <div class="contact-col contact-block"><p class="content-title">部門</p><p class="content-content bold" id="department">部門名</p></div>
+                </div>
+                <div class="contact-row">
+                    <div class="contact-col contact-block"><p class="content-title">員工編號</p><p class="content-content bold" id="employeeId">ABC-123456789</p></div>
+                    <div class="contact-col contact-block"><p class="content-title">出生日期</p><p class="content-content bold" id="birthDate">2025/02/20</p></div>
+                    <div class="contact-col contact-block"><p class="content-title">電話</p><p class="content-content bold" id="phoneNumber">0919-123-456</p></div>
+                </div>
+                <div class="contact-row">
+                    <div class="contact-col contact-block"><p class="content-title">地址</p><p class="content-content bold" id="address">台中市台中市台中市台中市台中市台中市台中市</p></div>
+                    <div class="contact-col contact-block">
+                        <p class="content-title">緊急聯絡人</p>
+                        <p class="content-content bold" id="emergencyContact" pattern="[0-9]{4}-[0-9]{3}-[0-9]{3}" title="請輸入正確的手機號碼格式 (例如: 0919-123-456)">2025/02/20</p>
+                    </div>
+                    <div class="contact-col contact-block">
+                        <p class="content-title">緊急電話</p>
+                        <p class="content-content bold" id="emergencyPhone" pattern="[0-9]{4}-[0-9]{3}-[0-9]{3}" title="請輸入正確的手機號碼格式 (例如: 0919-123-456)">0919-123-456</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+
+</div> @*原div*@
+
+
+<script>
+    // Show loading indicator
+    $("#loading").show();
+
+    $(document).ready(function(){
+
+        $.ajax({
+        url: '/Profile/GetIndexData',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+
+            // console.log(response);
+
+            if (response.length > 0) {
+                const employee = response[0];
+                // console.log('Name:', employee.name);
+                // console.log('Email:', employee.email);
+
+                document.getElementById("ProfileImage").src = "data:image/jpg;base64," + employee.employeePhoto;
+                appendProfileInfo(employee);
+
+                $("#loading").hide();
+                $("#profileContainer").show();
+            }
+        },
+        error: function(xhr, status, error) {
+
+            console.error('Error fetching data:', error);
+        }
+        });
+
+        $('#towardSettings').click(function(){
+            location.href ="https://" + location.hostname + ":" +window.location.port + "/profile/settings";
+        });
+    });
+
+    // 顯示資料
+    function appendProfileInfo(data) {
+        // console.log("Appending profile info:",data.hireDate,data.position);
+
+        const profileContainer = document.getElementById("profile-info");
+
+        const nameElement = document.createElement("p");
+        nameElement.className = "txt-center profile-title bold";
+        nameElement.textContent = data.employeeName;
+
+        const emailElement = document.createElement("p");
+        emailElement.className = "txt-center profile-title";
+        emailElement.textContent = data.mail;
+
+        profileContainer.append(nameElement,emailElement);
+
+        document.getElementById("yearsOfService").textContent = data.yearsBetween;
+        document.getElementById("leaveDays").textContent = parseInt((data.annualLeave/8));
+
+        // 格式化日期函數
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 代入右側 9個項目資料
+        document.getElementById("hireDate").textContent = formatDate(data.hireDate);
+        document.getElementById("position").textContent = data.position;
+        document.getElementById("department").textContent = data.department;
+        document.getElementById("employeeId").textContent = data.employeeId;
+        document.getElementById("birthDate").textContent = formatDate(data.birthDate);
+        document.getElementById("phoneNumber").textContent = data.phoneNumber.slice(0,4)+"-"+data.phoneNumber.slice(4,7)+"-"+data.phoneNumber.slice(7);
+        document.getElementById("address").textContent = data.address;
+        document.getElementById("emergencyContact").textContent = data.emergencyContact;
+        document.getElementById("emergencyPhone").textContent = data.emergencyContactPhone.slice(0,4)+"-"+data.emergencyContactPhone.slice(4,7)+"-"+data.emergencyContactPhone.slice(7);
+    }
+</script>

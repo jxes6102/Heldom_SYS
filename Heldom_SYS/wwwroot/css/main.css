@@ -1,0 +1,215 @@
+﻿/*---------------------------------
+            頁面文字樣式              
+---------------------------------*/
+
+.menu-text {
+    color: var(--menu-text);
+}
+
+.db-title-l
+ {
+    color: var(--color-gray-dark);
+    font-size: var(--h4-size);
+    line-height: var(--h4-line);
+    font-weight: var(--font-weight-bold);
+}
+
+.db-title-s {
+    color: var(--color-gray-dark);
+    font-size: var(--h5-size);
+    line-height: var(--h5-line);
+    font-weight: var(--font-weight-bold);
+}
+
+.tb-title {
+    color: var(--color-gray-dark);
+    font-size: var(--p-size);
+    line-height: var(--p-line);
+    font-weight: var(--font-weight-bold);
+}
+.db-txt,
+.tb-txt {
+    color: var(--color-gray-medium);
+    font-size: var(--p-size);
+    line-height: var(--p-line);
+    font-weight: var(--font-weight-normal);
+}
+
+/* 文字對齊 */
+.db-title-l,
+.db-title-s,
+.db-txt {
+    text-align: left;
+}
+
+.tb-title,
+.tb-txt {
+    text-align: center;
+}
+
+/*---------------------------------
+            STATUS              
+---------------------------------*/
+
+/* 上下班狀態 ICON */
+.online {
+    color: var(--color-blue);
+}
+
+.offline {
+    color: var(--color-gray-light);
+}
+
+/* 核可狀態 ICON */
+.approved {
+    color: var(--color-green);
+}
+
+.approving {
+    color: var(--color-gray-medium);
+}
+
+
+/*---------------------------------
+            文字對齊方式              
+---------------------------------*/
+
+.txt-left {
+    text-align: left;
+    /* 靠左對齊 */
+}
+
+.txt-right {
+    text-align: right;
+    /* 靠右對齊 */
+}
+
+.txt-center {
+    text-align: center;
+    /* 水平置中 */
+}
+
+
+/*---------------------------------
+            物件對齊方式              
+---------------------------------*/
+
+.obj-vertical-center {
+    display: flex;
+    align-items: center;
+    /* 垂直置中 */
+}
+
+.obj-horizontal-center {
+    display: flex;
+    justify-content: center;
+    /* 水平置中 */
+}
+
+.obj-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* 水平+垂直置中 */
+}
+
+
+/*---------------------------------
+            table            
+---------------------------------*/
+/* 表格樣式設定 */
+.table {
+    table-layout: fixed; /* 確保單元格寬度一致 */
+    background-color: white;
+    --bs-table-striped-bg: white;
+    text-align: center;
+}
+
+    .table th {
+/*        width: 141px;*/
+        height: 38px;
+        vertical-align: middle;
+        padding: 0;
+        text-align: center;
+    }
+
+    .table td {
+/*        width: 141px;*/
+        height: 56px;
+        vertical-align: middle; /* 確保內容垂直置中 */
+        padding: 0; /* 移除預設內邊距 */
+        white-space: nowrap; /* 防止文字換行 */
+        overflow: hidden; /* 隱藏超出部分 */
+        text-overflow: ellipsis; /* 顯示省略號 */
+        border-bottom: 1px solid var(--color-line);
+        text-align: center;
+    }
+
+    /* 調整表格內容區域 */
+    .table tbody tr {
+        height: 56px;
+    }
+
+    /* 新增：調整編輯欄位中的圖示間距 */
+    .table td:last-child {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 30px;
+    }
+
+        .table td:last-child i {
+            cursor: pointer;
+        }
+
+.employeeImg {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+/*---------------------------------
+            btn            
+---------------------------------*/
+.button_area {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+}
+
+    .button_area button {
+        width: 240px !important;
+        height: 54px !important;
+        border-radius: 28px;
+        border: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .button_area button p {
+            margin: 0;
+            font-weight: bold;
+        }
+
+/* 修改取消按鈕樣式 */
+.btn-outline {
+    background-color: rgba(0, 64, 221, 0.2);
+    !important; /* 使用 20% 透明度 */
+    border: 1px solid var(--color-blue) !important;
+}
+
+    .btn-outline p {
+        color: var(--color-blue) !important;
+    }
+
+/* 保持儲存按鈕樣式 */
+.btn-primary {
+    background-color: var(--color-blue);
+}
+
+    .btn-primary p {
+        color: white;
+    }
+
+

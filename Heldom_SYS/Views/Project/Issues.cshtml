@@ -1,0 +1,498 @@
+﻿@* stylesheet *@
+<link rel="stylesheet" href="~/css/Project/Issues.css" asp-append-version="true" />
+
+@* https://localhost:7142/Project/Issues *@
+
+
+<div class=" main_wrap test border-radius box-shadow">
+    <div id="unusual" class="unusual_main_area obj-horizontal-center">
+        <div class="top_area">
+            <h4 class="bold">異常回報紀錄</h4>
+            <button id="unusualPopupButton" class="button button_style bold">新增</button>
+        </div>
+        <div class="middle_area">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th class="tb-title">事件編號</th>
+                        <th class="tb-title">狀態</th>
+                        <th class="tb-title">事件類型</th>
+                        <th class="tb-title">事件標題</th>
+                        <th class="tb-title">開始時間</th>
+                        <th class="tb-title">結束時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        <div class="end_area obj-center">
+        </div>
+    </div>
+
+    @if ((ViewBag.Role == "A") || (ViewBag.Role == "M")) {
+        <div id="track" class="track_main_area obj-horizontal-center">
+            <div class="top_area">
+                <h4 class="bold">異常回報追蹤處理</h4>
+            </div>
+            <div class="chose-display">
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold p-width">發生期間</p>
+                    <input type="datetime-local" class="form-control" id="occurInput">
+                </div>
+
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold p-width">紀錄員工</p>
+                    <input maxlength="10" type="text" class="form-control" id="staffInput">
+                </div>
+
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold p-width">事件類型</p>
+                    <select id="categorySelect" class="form-select" aria-label="Default select example">
+                        <option selected value="ALL">全部</option>
+                        <option value="CON001">施工與圖紙尺寸不符</option>
+                        <option value="CON002">材料瑕疵</option>
+                        <option value="CON003">工地安全</option>
+                        <option value="CON004">人員受傷</option>
+                        <option value="CON004">設備故障</option>
+                    </select>
+                </div>
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold p-width">事件標題</p>
+                    <input maxlength="50" type="text" class="form-control" id="titleInput">
+                </div>
+                <button id="AccidentSearch" class="button button_style bold">查詢</button>
+            </div>
+            <div class="middle_area">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="tb-title">事件編號</th>
+                            <th class="tb-title">狀態</th>
+                            <th class="tb-title">事件類型</th>
+                            <th class="tb-title">事件標題</th>
+                            <th class="tb-title">開始時間</th>
+                            <th class="tb-title">結束時間</th>
+                            <th class="tb-title">紀錄員工</th>
+                            <th class="tb-title">編輯</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="end_area obj-center">
+            </div>
+        </div>
+    
+    }
+
+</div>
+
+<!-- track Pop-up -->
+<div id="trackPopup" class="track-popup-wrap">
+    <div class="track-popup-content">
+        <div class="track-top obj-vertical-center">
+            <div class="track-close obj-center">&times;</div>
+        </div>
+        <div class="track-area">
+            <div class="message-display">
+                <h4 class="color-gray-dark bold">是否刪除此異常回報追蹤?</h4>
+            </div>
+            <div class="obj-center track-check">
+                <button id="delete-track" class="track-button obj-center">
+                    <p class="bold color-white">
+                        是
+                    </p>
+                </button>
+                <button class="track-button obj-center">
+                    <p class="bold color-white">
+                        否
+                    </p>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let nowReportPage = 1
+    let nowTrackPage = 1
+    let deleteID = ""
+    let trackData = []
+    
+    function GetReport() {
+
+        let req = {
+            Page: nowReportPage.toString(),
+        }
+
+
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "/Accident/GetReport",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(req),
+                success: resolve,
+                error: reject
+            });
+        });
+    }
+
+    function GetTrack() {
+
+        let req = {
+            Page: nowTrackPage.toString(),
+        }
+
+
+        if($("#occurInput").val()){
+            let jsDateStr = $("#occurInput").val();
+            let jsDate = new Date(jsDateStr);
+            let formattedDate = jsDate.toISOString().slice(0, 19).replace("T", " ");
+
+            req.Date = formattedDate
+        }
+
+        if($("#titleInput").val()){
+            req.Title = $("#titleInput").val()
+        }
+
+        if($("#staffInput").val()){
+            req.Name = $("#staffInput").val()
+        }
+
+        if($("#categorySelect option:selected").text()){
+            req.Type = $("#categorySelect option:selected").text()
+        }
+
+
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "/Accident/GetTrack",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(req),
+                success: resolve,
+                error: reject
+            });
+        });
+    }
+
+    //拿取異常回報紀錄
+    let createReportTable = async() => {
+        let data = await GetReport();
+        let tableData = data.data
+            
+        $("#unusual .middle_area table tbody ").empty()
+
+        for(let i = 0;i<tableData.length;i++){
+            let StartTime = tableData[i]?.StartTime?.split('T') || ["" , ""]
+            let EndTime = tableData[i]?.EndTime?.split('T') || ["" , ""]
+
+            let ele = `
+                <tr class="mouse-pointer">
+                    <td class="tb-txt">${tableData[i].AccidentId}</td>
+                    <td class="tb-txt">
+                        <p>
+                            ${tableData[i].IncidentStatus ? `<i class="fas fa-check-circle color-green"></i>` : `<i class="fas fa-exclamation-circle color-gray-light"></i>`}
+                        </p>
+                    </td>
+                    <td class="tb-txt">${tableData[i].AccidentType}</td>
+                    <td class="tb-txt">${tableData[i].AccidentTitle}</td>
+                    <td class="tb-txt">
+                        <div class="center_display">
+                            <span>${StartTime[0] }</span>
+                            <span>${StartTime[1] }</span>
+                        </div>
+                    </td>
+                    <td class="tb-txt">
+                        <div class="center_display">
+                            <span>${EndTime[0] }</span>
+                            <span>${EndTime[1] }</span>
+                        </div>
+                    </td>
+                </tr>
+            `
+
+            $("#unusual .middle_area table tbody ").append(ele)
+
+        }
+
+
+        $("#unusual .end_area ").empty()
+
+        //回報分頁生成
+        if(nowReportPage != 1){
+            $("#unusual .end_area").append(`
+                <h4 class="step-report mouse-pointer"><i class="fas fa-angle-left"></i></h4>
+            `)
+        }
+        
+        for(let i = 0;i<data.pageCount;i++ ){
+            if((i+1) == nowReportPage){
+                $("#unusual .end_area").append(`
+                    <div class="page_circle obj-center circle_show" >
+                        <p class="bold">${i+1}</>
+                    </div>
+                `)
+            }else{
+                $("#unusual .end_area").append(`
+                    <div class="page_circle obj-center mouse-pointer" >
+                        <p class="bold">${i+1}</>
+                    </div>
+                `)
+            }
+           
+        }
+
+        if(nowReportPage != data.pageCount){
+            $("#unusual .end_area").append(`
+                <h4 class="step-report mouse-pointer"><i class="fas fa-angle-right"></i></h4>
+            `)
+        }
+        
+        changeReportPage()
+        stepReportPage()
+
+        // 查看異常
+        $("#unusual .middle_area table tbody tr").on("click", function(e) {
+            let ID = $(this).children().eq(0).text().trim()
+            location.href='/Project/Issues?type=Unusual&id=' + ID + '&motion=select'
+        });
+
+    }
+
+    let changeReportPage = () => {
+        $('#unusual .end_area .page_circle').on('click', function(event) {
+            nowReportPage = $(this).children().text().trim()
+            createReportTable()
+        });
+
+    }
+
+    let stepReportPage = () => {
+        $('.step-report').on('click', function(event) {
+            let className = $(this).children().prop('class')
+
+            if(className.includes("left")){
+                nowReportPage = parseInt(nowReportPage) - 1
+            }else if(className.includes("right")){
+                nowReportPage = parseInt(nowReportPage) + 1
+            }
+            createReportTable()
+        });
+    }
+
+
+    //拿取異常追蹤紀錄
+    let createTrackTable = async() => {
+        let data = await GetTrack();
+
+        //現在頁數大於結果分頁總數
+        if(parseInt(nowTrackPage) > data.pageCount){
+            nowTrackPage = 1
+            data = await GetTrack();
+        }
+
+        let tableData = data.data
+        trackData = tableData
+
+        $("#track .middle_area table tbody ").empty()
+
+        for(let i = 0;i<tableData.length;i++){
+
+            let StartTime = tableData[i]?.StartTime?.split('T') || ["" , ""]
+            let EndTime = tableData[i]?.EndTime?.split('T') || ["" , ""]
+
+            let ele = `
+                <tr class="mouse-pointer">
+                    <td class="tb-txt">${tableData[i].AccidentId}</td>
+                    <td class="tb-txt">
+                        <p>
+                            ${tableData[i].IncidentStatus ? `<i class="fas fa-check-circle color-green"></i>` : `<i class="fas fa-exclamation-circle color-gray-light"></i>`}
+                        </p>
+                    </td>
+                    <td class="tb-txt">${tableData[i].AccidentType}</td>
+                    <td class="tb-txt">${tableData[i].AccidentTitle}</td>
+                    <td class="tb-txt">
+                        <div class="center_display">
+                            <span>${StartTime[0]}</span>
+                            <span>${StartTime[1]}</span>
+                        </div>
+                    </td>
+                    <td class="tb-txt">
+                       <div class="center_display">
+                            <span>${EndTime[0]}</span>
+                            <span>${EndTime[1]}</span>
+                        </div>
+                    </td>
+                    <td class="tb-txt EmployeeNameTD">${tableData[i].EmployeeName}</td>
+                    <td class="tb-txt td_center">
+                       <div class="icon_display">
+                            <p class="trackPopupButton">
+                                <i class="fas fa-pen"></i>
+                            </p>
+                            <p class="deleteTrack">
+                                <i class="fas fa-trash"></i>
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+            `
+
+            $("#track .middle_area table tbody ").append(ele)
+
+        }
+
+
+        $("#track .end_area ").empty()
+
+        //追蹤分頁生成
+        if(nowTrackPage != 1){
+            $("#track .end_area").append(`
+                <h4 class="step-track mouse-pointer"><i class="fas fa-angle-left"></i></h4>
+            `)
+        }
+
+        for(let i = 0;i<data.pageCount;i++ ){
+            if((i+1) == nowTrackPage){
+                $("#track .end_area").append(`
+                    <div class="page_circle obj-center circle_show">
+                        <p class="bold">${i+1}</>
+                    </div>
+                `)
+            }else{
+                $("#track .end_area").append(`
+                    <div class="page_circle obj-center mouse-pointer">
+                        <p class="bold">${i+1}</>
+                    </div>
+                `)
+            }
+        }
+
+        if(nowTrackPage != data.pageCount){
+             $("#track .end_area").append(`
+                <h4 class="step-track mouse-pointer"><i class="fas fa-angle-right"></i></h4>
+            `)
+        }
+       
+
+        changeTrackPage()
+        stepTrackPage()
+
+         // 查看回復
+        $("#track .middle_area table tbody tr").on("click", function(e) {
+            e.stopPropagation();
+            let ID = $(this).children().eq(0).text().trim()
+            location.href='/Project/Issues?type=Track&id=' + ID + '&motion=select'
+        });
+
+        
+        $(".EmployeeNameTD").on("click", function(e) {
+            e.stopPropagation();
+            let name = $(this).text()
+            let id = trackData.find((item)=> item.EmployeeName == name).EmployeeId.trim()
+            location.href=`/Profile/NewAccount/${id}`
+        });
+
+        // 新增回復
+        $(".trackPopupButton").on("click", function(e) {
+            e.stopPropagation();
+            let ID = $(this).parent().parent().parent().children().eq(0).text().trim()
+            location.href='/Project/Issues?type=Track&id=' + ID + '&motion=add'
+        });
+
+
+        // 刪除回復
+        $(".deleteTrack").on("click", function(e) {
+            deleteID = $(this).parent().parent().parent().children().eq(0).text().trim()
+            e.stopPropagation();
+            $(".track-popup-wrap").show()
+        });
+
+
+        // 點擊背景區域關閉彈窗
+        $("#trackPopup").click(function(e) {
+            e.stopPropagation();
+            if(e.target === this) {
+                $(this).fadeOut();
+            }
+        });
+
+        // 點擊關閉彈窗
+        $(".track-close").click(function(e) {
+            e.stopPropagation();
+            if(e.target === this) {
+                $(".track-popup-wrap").fadeOut()
+            }
+        });
+
+    }
+ 
+    let changeTrackPage = () => {
+        $('#track .end_area .page_circle').on('click', function(event) {
+            nowTrackPage = $(this).children().text().trim()
+            createTrackTable()
+        });
+
+    }
+
+    let stepTrackPage = () => {
+        $('.step-track').on('click', function(event) {
+            let className = $(this).children().prop('class')
+
+            if(className.includes("left")){
+                nowTrackPage = parseInt(nowTrackPage) - 1
+            }else if(className.includes("right")){
+                nowTrackPage = parseInt(nowTrackPage) + 1
+            }
+            createTrackTable()
+        });
+    }
+
+    $(document).ready(async function() {
+        
+        createReportTable()
+        createTrackTable()
+
+
+        $("#AccidentSearch").on("click", function(e) {
+            nowTrackPage = 1
+            createTrackTable()
+        });
+
+        // 新增異常
+        $("#unusualPopupButton").on("click", function(e) {
+            location.href='/Project/Issues?type=Unusual&id=000&motion=add'
+        });
+
+        //刪除異常回報
+        $("#delete-track").on("click", function(e) {
+
+            let req = {
+                ID: deleteID.toString(),
+            }
+
+
+            $.ajax({
+                url: "/Accident/DeleteDetail",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(req),
+                success: function (res) {
+                    nowTrackPage = 1
+                    createTrackTable()
+                    $(".track-popup-wrap").fadeOut()
+                },
+                error: function (error) {
+                    console.log('error',error)
+                },
+            });
+
+        });
+
+    });
+
+</script>

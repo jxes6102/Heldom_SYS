@@ -1,0 +1,229 @@
+﻿@* stylesheet *@
+<link rel="stylesheet" href="/css/Profile/Settings.css" />
+@* https://localhost:7142/Profile/Settings *@
+
+<div id="loading" style="display: none;">Loading...</div>
+<div class="main_wrap border-radius box-shadow" id="profileContainer" style="display:none">
+    <div class="setting_main_area obj-horizontal-center">
+        <div class="top_area txt-left">
+            <h4 class="bold">個人資料設定</h4>
+        </div>
+        <div class="middle_area">
+            <div class="setting-row">
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">員工姓名</p>
+                    <input type="text" id="employeeName" class="form-control" placeholder="姓名" disabled />
+                </div>
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">職位</p>
+                    <input type="text" id="position" class="form-control" placeholder="技士" disabled />
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">員工編號</p>
+                    <input type="text" id="employeeId" class="form-control" placeholder="個人編號" disabled />
+                </div>
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">生日</p>
+                    <input type="date" id="birthDate" class="form-control" placeholder="2025-02-20" disabled />
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">聯絡電話</p>
+                    <input type="tel" id="phoneNumber" class="form-control" placeholder="0919-123-456"
+                           pattern="[0-9]{4}-[0-9]{3}-[0-9]{3}"
+                           title="請輸入正確的手機號碼格式 (例如: 0919-123-456)" />
+                </div>
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">地址</p>
+                    <input type="text" id="address" class="form-control" placeholder="台中市台中市台中市台中市台中市" />
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">緊急聯絡人</p>
+                    <input type="text" id="emergencyContact" class="form-control" placeholder="聯絡人" />
+                </div>
+                <div class="input_wrap">
+                    <p class="color-gray-dark bold">緊急電話</p>
+                    <input type="tel" id="emergencyPhone" class="form-control" placeholder="0919-123-456"
+                           pattern="[0-9]{4}-[0-9]{3}-[0-9]{3}"
+                           title="請輸入正確的手機號碼格式 (例如: 0919-123-456)" />
+                </div>
+            </div>
+        </div>
+        <div class="button_area">
+            <button type="button" class="btn btn-outline" id="cancel"><p class="color-blue">取消</p></button>
+            <button type="button" class="btn btn-primary" id="save"><p>儲存</p></button>
+        </div>
+    </div>
+</div>
+
+<!-- Popup -->
+<div id="clockPopup" class="modal clock-popup-wrap">
+    <div class="modal-dialog clock-popup-content">
+        <div class="modal-content">
+            <div class="modal-header clock-top obj-vertical-center">
+                <h5 class="modal-title color-gray-dark bold">提醒</h5>
+                <div class="clock-close obj-center"><i class="fas fa-times"></i></div>
+            </div>
+            <div class="modal-body clock-area">
+                <h1 id="timeClock" class="color-gray-medium bold">電話號碼格式錯誤</h1>
+                <h4 class="color-gray-dark bold">請重新確認後儲存</h4>
+            </div>
+            <div class="modal-footer clock-check">
+                <button class="clock-button obj-center" id="yes-Button">
+                    <p class="bold color-white">確認</p>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $("#loading").show();
+
+    $(document).ready(function(){
+        // 取得個人資料
+        $.ajax({
+            url: '/Profile/GetSettingsData',
+            method: 'GET',
+            success: function(response) {
+                appendProfileInfo(response[0]);
+            },
+            error: function(error) {
+                console.error("GetSettingsData failed!", error);
+            },
+            complete: function() {
+                $("#loading").hide();
+                $("#profileContainer").show();
+            }
+        });
+    });
+
+    // 顯示個人資料
+    function appendProfileInfo(data){
+        // console.log("Appending profile info:",data.phoneNumber);
+
+        document.getElementById("employeeName").value = data.employeeName;
+        document.getElementById("position").value = data.position;
+        document.getElementById("employeeId").value = data.employeeId;
+        document.getElementById("birthDate").value = formatDate(data.birthDate);
+        document.getElementById("phoneNumber").value = formatPhone(data.phoneNumber);
+        document.getElementById("address").value = data.address;
+        document.getElementById("emergencyContact").value = data.emergencyContact;
+        document.getElementById("emergencyPhone").value = formatPhone(data.emergencyContactPhone);
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        let date = new Date(dateString);
+        let year = date.getFullYear();
+        let month = String(date.getMonth() + 1).padStart(2, '0');
+        let day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function formatPhone(phoneString){
+        if(!phoneString) return;
+        return phoneString.slice(0,4) + "-" + phoneString.slice(4,7)+"-"+phoneString.slice(7);
+    }
+
+    $('#phoneNumber').on('input',function(){
+        var input = this.value.replace(/\D/g, '').substring(0, 10);
+        var formattedInput = input;
+        if (input.length > 4 && input.length <= 7) {
+            formattedInput = input.replace(/(\d{4})(\d{1,3})/, '$1-$2');
+        }else if(input.length >= 7){
+            formattedInput = input.replace(/(\d{4})(\d{3})(\d{1,3})/, '$1-$2-$3');
+        }
+        this.value = formattedInput;
+    })
+    $('#emergencyPhone').on('input',function(){
+        var input = this.value.replace(/\D/g, '').substring(0, 10);
+        var formattedInput = input;
+        if (input.length > 4 && input.length <= 7) {
+            formattedInput = input.replace(/(\d{4})(\d{1,3})/, '$1-$2');
+        }else if(input.length >= 7){
+            formattedInput = input.replace(/(\d{4})(\d{3})(\d{1,3})/, '$1-$2-$3');
+        }
+        this.value = formattedInput;
+    })
+
+    $('#cancel').click(function(){
+        location.href ="https://" + location.hostname + ":" +window.location.port + "/Profile/Index";
+    });
+
+    // 更新個人資料
+    $('#save').click(function(){
+        let phoneNumber = document.getElementById("phoneNumber").value;
+        let address = document.getElementById("address").value;
+        let emergencyContact = document.getElementById("emergencyContact").value;
+        let emergencyContactPhone = document.getElementById("emergencyPhone").value;
+
+        const phonePattern = /^[0-9]{4}-[0-9]{3}-[0-9]{3}$/;
+        if (!phonePattern.test(phoneNumber)||!phonePattern.test(emergencyContactPhone)) {
+            $("#clockPopup").fadeIn();
+            popup();
+            return;
+        }
+
+        if(!emergencyContact || !emergencyContactPhone){
+            alert('不可留空');
+            return;
+        }
+
+        let updateData = {
+            phoneNumber: phoneNumber.slice(0,4) + phoneNumber.slice(5,8) + phoneNumber.slice(9),
+            address: address,
+            emergencyContact: emergencyContact,
+            emergencyContactPhone: emergencyContactPhone.slice(0,4) + emergencyContactPhone.slice(5,8) + emergencyContactPhone.slice(9)
+        };
+
+        if(updateData){
+            $.ajax({
+                url: '/Profile/UpdateSettingsData',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(updateData),
+                success: function(response) {
+                    if (response==true) {
+                        alert('資料更新成功！');
+                        window.location.href = '/Profile/Index';
+                    } else {
+                        alert('更新失敗：' + response.message);
+                    }
+                },
+                error: function(error) {
+                    console.error('更新失敗：', error);
+                    alert('更新失敗，請稍後再試！');
+                }
+            });
+        }
+    });
+
+    // 電話號碼格式錯誤
+    function popup(){
+
+        $("#yes-Button").click(function(){
+            $("#clockPopup").fadeOut();
+        });
+
+        $(".clock-close").click(function(){
+            $("#clockPopup").fadeOut();
+        });
+
+        $('#no-Button').click(function(){
+            $("#clockPopup").fadeOut();
+        })
+
+        // 點擊背景區域關閉彈窗
+        $("#clockPopup").click(function(event) {
+            if(event.target === this) {
+                $(this).fadeOut();
+            }
+        });
+    }
+</script>

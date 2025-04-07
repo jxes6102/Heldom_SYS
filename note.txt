@@ -1,0 +1,46 @@
+📌 目前已安裝套件 (共 7 個)
+1. Microsoft.AspNetCore.SignalR
+2. Microsoft.EntityFrameworkCore.SqlServer
+3. Microsoft.EntityFrameworkCore.Tools
+4. Newtonsoft.Json
+5. NPOI
+6. Quartz.AspNetCore
+7. Dapper
+---
+
+
+1. 透過套件管理員安裝 Entity Framework Core 相關套件
+Microsoft.EntityFrameworkCore.SqlServer
+Microsoft.EntityFrameworkCore.Tools
+    
+套件管理員位於：工具 → NuGet套件管理員 → 管理方案的NuGet套件
+
+
+2. 在套件管理器主控台下 Scaffold-DbContext 指令，
+Scaffold-DbContext 指令可以根據資料庫底下的資料表生成對應的類別檔案
+        
+        a. 套件管理器主控台位於：檢視 → 其他視窗 → 套件管理器主控台
+
+
+        b. 請閱讀官方文件，探索 Scaffold-DbCoNtext 指令
+           https://learn.microsoft.com/zh-tw/ef/core/cli/powershell#scaffold-dbcontext
+
+
+        c. 在 套件管理器主控台 輸入 Scaffold-DbCoNtext 指令 並執行
+		
+			Scaffold-DbContext "Name=ConnectionStrings:ConstructionDB" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
+
+
+
+
+builder.Services.AddDbContext<ConstructionDbContext>(
+            options => options.UseSqlServer(builder.Configuration.GetConnectionString("ConstructionDBConnstring")));
+
+
+    "ConnectionStrings": {
+        "ConstructionDB": "Server=localhost\\SQLEXPRESS;Database=ConstructionDB;Integrated Security=True;Trusted_Connection=True;TrustServerCertificate=True"
+    },
+	
+test
+	
+
