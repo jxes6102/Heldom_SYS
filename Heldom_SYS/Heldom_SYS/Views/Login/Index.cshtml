@@ -1,0 +1,214 @@
+﻿@{
+    Layout = "_EmptyLayout";
+}
+
+
+@* stylesheet *@
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/main.css" asp-append-version="true" />
+<!-- 加入 Font Awesome 6 CDN，確保綁定 integrity 和 crossorigin -->
+@* <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-/jE8GvnF/7F2qP1q7z6Iu7u0nB7Y8E8q5eR7o9dF+7nB5bK+7gL7dT7k1o7p7O5u7mF4r5u5E6F+7F2qP1q7z6Iu7u0nB7Y8E8q5eR7o9dF+7nB5bK+7gL7dT7k1o7p7O5u7mF4r5u5E6F" crossorigin="anonymous"> *@
+
+<link rel="stylesheet" href="~/css/Login/Index.css" crossorigin="anonymous" />
+
+<div class="login-container">
+    <div class="logo">
+        <img src="~/img/Heldom.png" style="width:100px;height:100px;" />
+        </div>
+    <div class="input-group">
+        <label class="input-label">本公司員工</label>
+        <select class="select-field" id="userType">
+            <option value="employee">本公司員工</option>
+            <option value="visitor">臨時人員</option>
+        </select>
+    </div>
+    <div id="companyArea" class="input-group">
+        <label class="input-label" id="companyLabel">廠商</label>
+        <select class="select-field" id="companySelect">
+        </select>
+    </div>
+    <div class="input-group">
+        <label class="input-label" id="accountLabel">帳號</label>
+        <input type="text" maxlength="30" class="input-field" id="account" placeholder="請輸入您的帳號" >
+    </div>
+    <div class="input-group">
+        <label class="input-label" id="passwordLabel">密碼</label>
+        <div class="password-field">
+            <input type="password" maxlength="30" class="input-field" id="password" placeholder="請輸入密碼" >
+            <span class="password-toggle" id="togglePassword"><i class="fas fa-eye"></i></span>
+        </div>
+    </div>
+    <button class="login-button">登入</button>
+</div>
+
+<!-- error Pop-up -->
+<div id="errorPopup" class=" error-popup-wrap">
+    <div class="error-popup-content">
+        <div class="error-top obj-vertical-center">
+            <div class="error-close obj-center">&times;</div>
+        </div>
+        <div class="error-area">
+            <div class="message-display">
+                <h4 class="color-gray-dark bold">登入失敗</h4>
+                <h4 class="color-gray-dark bold">請重新輸入</h4>
+            </div>
+            @* <div class="obj-center error-check"> *@
+            @*     <button class="error-button obj-center"> *@
+            @*         <p class="bold color-white"> *@
+            @*             是 *@
+            @*         </p> *@
+            @*     </button> *@
+            @*     <button class="error-button obj-center"> *@
+            @*         <p class="bold color-white"> *@
+            @*             否 *@
+            @*         </p> *@
+            @*     </button> *@
+            @* </div> *@
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const userType = document.getElementById('userType');
+    const accountLabel = document.getElementById('accountLabel');
+    const account = document.getElementById('account');
+    const passwordLabel = document.getElementById('passwordLabel');
+    const password = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+
+    $("#companyArea").hide()
+
+    userType.addEventListener('change', function() {
+        const value = this.value;
+        if (value === 'employee') {
+            $("#companyArea").hide()
+            accountLabel.textContent = '帳號';
+            account.placeholder = '請輸入您的帳號';
+            account.type = 'text';
+            passwordLabel.textContent = '密碼';
+            password.type = 'password';
+            password.placeholder = '請輸入密碼';
+            togglePassword.style.display = 'block';
+        } else if (value === 'visitor') {
+            $("#companyArea").show()
+            accountLabel.textContent = '臨時人員姓名';
+            account.placeholder = '請輸入您的姓名';
+            account.type = 'text';
+            passwordLabel.textContent = '電話';
+            password.type = 'tel'; /* 設置為電話輸入類型 */
+            password.placeholder = '請輸入您的電話號碼';
+            togglePassword.style.display = 'none';
+        }
+    });
+
+    //拿取廠商資料
+    function GetCompany() {
+        $.ajax({
+            url: "/Tool/GetCompany",
+            type: "GET",
+            success: function (data){
+
+                for(let i = 0;i<data.length;i++){
+                    let value = data[i].CompanyId;
+                    let text = data[i].CompanyName;
+                    $('#companySelect').append(`<option value="${value}">${text}</option>`);
+                }
+ 
+            },
+            error: function (error){
+                console.log('error',error)
+            },
+        });
+    }
+
+    GetCompany()
+
+    togglePassword.addEventListener('click', function() {
+        const type = password.type === 'password' ? 'text' : 'password';
+        password.type = type;
+        const icon = this.querySelector('i');
+        if (type === 'password') {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        } else {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    });
+
+    
+    let apiLoading = false
+    let errorTimer = null
+    $(".login-button").click(function(){
+
+        let Type = $("#userType").val()
+        let Account = $("#account").val()
+        let PassWord = $("#password").val()
+        let CompanyID = $("#companySelect").val()
+
+        console.log('CompanyID',CompanyID)
+
+        if((Type.length == 0) || (Account.length == 0)  || (PassWord.length == 0) || apiLoading){
+            console.log("輸入錯誤或空值")
+            return
+        }
+
+        apiLoading = true
+
+        $.ajax({
+            url: "/Login/Enter",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                Type: Type,
+                Account: Account,
+                PassWord: PassWord,
+                CompanyID:CompanyID
+            }),
+            success: function(response) {
+                // console.log("response:", response);
+                if(response.route){
+                    // console.log("location.href",location.href)
+                    //console.log("location.hostname",location.hostname)
+                    //console.log("window.location.port",window.location.port);
+                    //console.log("response.route",response.route)
+                    //console.log("link A","https://" + location.hostname + ":" +window.location.port + "/" + response.route);
+                    //console.log("link B", location.href + response.route);
+                    //location.href = response.route
+                    location.href ="https://" + location.hostname + ":" +window.location.port + "/" + response.route
+                }else{
+                    // console.log('登入失敗')
+                    $("#errorPopup").fadeIn();
+                
+                    errorTimer = setTimeout(function() {
+                        $("#errorPopup").fadeOut();
+                    }, 2000);
+                }
+
+                apiLoading = false
+                
+            },
+            error: function(error) {
+                console.log("Error:", error);
+                apiLoading = false
+            }
+        });
+
+    });
+
+    //登入失敗視窗控制
+    $(".error-close").click(function(){
+        $("#errorPopup").fadeOut();
+        clearTimeout(errorTimer);
+    });
+
+    // 點擊背景區域關閉彈窗
+    $("#errorPopup").click(function(event) {
+        if(event.target === this) {
+            $(this).fadeOut();
+            clearTimeout(errorTimer);
+        }
+    });
+
+</script>

@@ -1,0 +1,589 @@
+﻿@* stylesheet *@
+<link rel="stylesheet" href="~/css/Project/IssuesDetail.css" asp-append-version="true" />
+
+@* https://localhost:7142/Project/Issues?type=Unusual&id=000&motion=add *@
+
+
+<div class="main_wrap border-radius box-shadow">
+    <h4 class="bold">新增異常回報紀錄</h4>
+    <div class="report-display">
+
+        <div class="input_wrap">
+            <div class="text-wrap">
+                <p class="color-gray-dark bold p-width">事件標題</p>
+            </div>
+            <input  maxlength="10" type="text" class="form-control" id="title">
+        </div>
+
+        @* <div class="input_wrap"> *@
+        @*     <div class="text-wrap"> *@
+        @*         <p class="color-gray-dark bold p-width">事件編號</p> *@
+        @*     </div> *@
+        @*     <input maxlength="10" type="text" class="form-control" id="number"> *@
+        @* </div> *@
+
+
+        <div class="input_wrap">
+            <div class="text-wrap">
+                <p class="color-gray-dark bold p-width">事件類型</p>
+            </div>
+            <select id="categorySelect" class="form-select" aria-label="Default select example">
+                <option selected value="CON001">施工與圖紙尺寸不符</option>
+                <option value="CON002">材料瑕疵</option>
+                <option value="CON003">工地安全</option>
+                <option value="CON004">人員受傷</option>
+                <option value="CON004">設備故障</option>
+            </select>
+        </div>
+
+        <div class="input_wrap">
+            <div class="text-wrap">
+                <p class="color-gray-dark bold p-width">發生時間</p>
+            </div>
+            <input type="datetime-local" class="form-control" id="startDate">
+        </div>
+
+        @if (!(ViewBag.Motion == "add" && ViewBag.Type == "Unusual"))
+        {
+            <div class="input_wrap">
+                <div class="text-wrap">
+                    <p class="color-gray-dark bold p-width">結束時間</p>
+                </div>
+                <input type="datetime-local" class="form-control" id="endDate">
+            </div>
+        }
+       
+        <div class="explain_wrap">
+            <div class="text-wrap">
+                <p maxlength="50" class="color-gray-dark bold p-width">事件描述</p>
+            </div>
+            <textarea maxlength="100" id="description" class="textarea_style"></textarea>
+        </div>
+
+        <div class="file_wrap">
+            <div class="text-wrap">
+                <p class="color-gray-dark bold p-width">事件圖片</p>
+            </div>
+
+        </div>
+        @if (!(ViewBag.Motion == "add" && ViewBag.Type == "Unusual"))
+        {
+            <div class="status_wrap">
+                <div class="text-wrap">
+                    <p class="color-gray-dark bold p-width">事件狀態</p>
+                </div>
+
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+                    <p class="form-check-label" id="status-word" for="flexSwitchCheckDefault">處理中/完成</p>
+                </div>
+            </div>
+        }
+       
+
+    </div>
+
+    @if (!(ViewBag.Motion == "add" && ViewBag.Type == "Unusual"))
+    {
+        <div class="track-display">
+            <div class="explain_wrap">
+                <div class="text-wrap">
+                    <p maxlength="50" class="color-gray-dark bold p-width">回覆內容</p>
+                </div>
+                <textarea maxlength="100" id="reply" class="textarea_style"></textarea>
+            </div>
+
+            <div class="file_wrap track">
+                <div class="text-wrap">
+                    <p class="color-gray-dark bold p-width">回覆圖片</p>
+                </div>
+
+            </div>
+
+        </div>
+    }
+    
+    <div class="end-check">
+        <button class="back-button obj-center">
+            <p class="bold color-white">
+                取消
+            </p>
+        </button>
+        @if (ViewBag.Motion == "add"){
+            <button class="save-button obj-center">
+                <p class="bold color-white">
+                    儲存
+                </p>
+            </button>
+        }
+
+    </div>
+
+    @* 圖片放大 *@
+    <div id="picturePopup" class="picture-popup-wrap">
+        <div class="picture-popup-content">
+            <img class="picture-img" src="#" alt="Alternate Text" />
+        </div>
+    </div>
+
+    <input type="file" class="form-control d-none" id="fileAdd" accept="image" multiple>
+    <input type="file" class="form-control d-none" id="fileAddTrack" accept="image" multiple>
+</div>
+<script>
+    let Motion = @Html.Raw(Json.Serialize(ViewBag.Motion));
+    let Type = @Html.Raw(Json.Serialize(ViewBag.Type));
+    let ID = @Html.Raw(Json.Serialize(ViewBag.ID));
+    let AccidentId = ""
+    let fileList = []
+    let fileListTrack = []
+    let maxSize = 1024 * 1024 * 3 // 3M
+    let IncidentStatus = false
+    // 回報區塊
+    let fileDiv = `
+        <div class="file-area obj-center chose-temp">
+            <h3><i class="fas fa-plus"></i></h3>
+        </div>
+    `
+
+    function AddReply() {
+        let reply = $("#reply").val();
+        let StartTime = $("#startDate").val()
+        let EndTime = $("#endDate").val()
+
+        if(!reply || !AccidentId){
+            alert("回復為空值")
+            return false
+        }
+
+        if (new Date(StartTime).getTime() > new Date(EndTime).getTime()) {
+            alert("結束時間早於開始時間")
+            return false
+        }
+
+        let formData = new FormData();
+        formData.append("Reply", reply);
+        formData.append("AccidentId", AccidentId);
+
+        if(IncidentStatus){
+            formData.append("Status", "1");
+        }else{
+            formData.append("Status", "0");
+        }
+
+        if(EndTime){
+            let jsDateStr = EndTime;
+            let jsDate = new Date(jsDateStr);
+            let formattedDate = jsDate.toISOString().slice(0, 19).replace("T", " ");
+            formData.append("EndTime", formattedDate);
+        }
+
+        for(let i = 0;i < fileListTrack.length;i++){
+            formData.append("Files", fileListTrack[i]);
+        }
+
+        $.ajax({
+            url: "/Accident/AddReply",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                location.href='/Project/Issues'
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('錯誤：', textStatus, errorThrown);
+            }
+        });
+
+    }
+
+
+    function GetDetail() {
+
+        let req = {
+            ID: ID.toString(),
+        }
+
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "/Accident/GetDetail",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(req),
+                success: resolve,
+                error: reject
+            });
+        });
+    }
+
+
+
+    // 新增回報
+
+    function AddAccident() {
+
+        let title = $("#title").val()
+        let category = $("#categorySelect option:selected").text()
+        let description = $("#description").val()
+        let StartTime = $("#startDate").val()
+
+        if(!title || !description || !StartTime){
+            alert("標題|描述|開始時間，不能空值")
+            return false
+        }
+
+        let formData = new FormData();
+        formData.append("AccidentTitle", title);
+        formData.append("AccidentType", category);
+        formData.append("Description", description);
+        formData.append("StartTime", new Date(StartTime).toISOString().slice(0, 19).replace("T", " "));
+        formData.append("Id", ID);
+
+        for(let i = 0;i < fileList.length;i++){
+            formData.append("Files", fileList[i]);
+        }
+
+        $.ajax({
+            url: "/Accident/AddAccident",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                location.href='/Project/Issues'
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error('錯誤：', textStatus, errorThrown);
+            }
+        });
+    }
+    
+     //監聽上傳回報檔案按鈕
+    let listenFile = () => {
+        $(".report-display .file_wrap .file-area").on("click", function(e) {
+            if(fileList.length < 5){
+                $("#fileAdd").click()
+            }
+
+        });
+    }
+
+    //監聽刪除圖片按鈕
+    let listenDeleteButton = () => {
+        $(".error-icon").on("click", function(e) {
+
+            if(Type == "Track"){
+                let index = $(".track-display .file_wrap .img-wrap").index($(this).parent())
+                fileListTrack.splice(index,1)
+                let addDivCount = $(".track-display .file_wrap .chose-temp").length
+
+                if((fileListTrack.length < 5) && (addDivCount == 0)){
+                    $(".track-display .file_wrap").append(fileDiv)
+                    listenFileTrack()
+                }
+
+            }else{
+                let index = $(".report-display .file_wrap .img-wrap").index($(this).parent())
+                fileList.splice(index,1)
+                let addDivCount = $(".report-display .file_wrap .chose-temp").length
+                if((fileList.length < 5) && (addDivCount == 0)){
+                    $(".report-display .file_wrap").append(fileDiv)
+                    listenFile()
+                }
+
+            }
+
+            $(this).parent().remove()
+
+        });
+    }
+    //取消監聽刪除按鈕
+    let unListenDeleteButton = () => {
+        $(".error-icon").unbind();
+    }
+    //取消監聽上傳檔案按鈕
+    let unListenFile = () => {
+        $(document).off("click", ".report-display .file_wrap .file-area");
+    }
+
+
+    //監聽上傳追蹤檔案按鈕
+    let listenFileTrack = () => {
+        $(".track-display .file_wrap .file-area").on("click", function(e) {
+            if(fileListTrack.length < 5){
+                $("#fileAddTrack").click()
+            }
+
+        });
+    }
+
+
+    //取消監聽追蹤檔案按鈕
+    let unListenFileTrack = () => {
+        $(document).off("click", ".track-display .file_wrap .file-area");
+    }
+    //圖片放大
+    let listenImg = () => {
+        $(".img-area").on("click", function(e) {
+            $(".picture-img").prop("src",e.target.src)
+            $("#picturePopup").fadeIn();
+        });
+
+        $(".picture-close").click(function(){
+            $("#picturePopup").fadeOut();
+        });
+
+        // 點擊背景區域關閉彈窗
+        $("#picturePopup").click(function(event) {
+            if(event.target === this) {
+                $(this).fadeOut();
+            }
+        });
+    }
+
+    // 讀取詳細資料
+    let setDetailData =  async() => {
+        let detail = await GetDetail()
+
+        AccidentId = detail.data.AccidentId
+        $("#title").val(detail.data.AccidentTitle)
+        $("#categorySelect option:contains('" + detail.data.AccidentType + "')").prop("selected", true);
+        $("#startDate").val(detail.data.StartTime);
+        if(detail?.data?.EndTime){
+            $("#endDate").val(detail?.data?.EndTime)
+        }
+        $("#description").text(detail.data.Description);
+        $("#reply").text(detail.data.Response);
+
+        //生成回報圖片
+        let reportFiles = detail.reportImg
+        // unListenFile()
+        for(let i = 0;i<reportFiles.length;i++){
+
+            let imgStr = "data:image/png;base64," + reportFiles[i]?.FileImage
+            fileList.push(reportFiles[i]?.FileImage)
+
+            let imgDiv = `
+                <div class="obj-center img-wrap">
+                    <img src="${imgStr}" class="img-area">
+                </div>
+            `
+            $(".report-display .file_wrap").append(imgDiv)
+        }
+        // listenFile()
+        listenImg()
+
+        //生成追蹤圖片
+        let trackFiles = detail.trackImg
+        for(let i = 0;i<trackFiles.length;i++){
+
+            let imgStr = "data:image/png;base64," +trackFiles[i]?.FileImage
+            fileListTrack.push(trackFiles[i]?.FileImage)
+
+            let imgDiv = ''
+            unListenDeleteButton() 
+            if(Motion == "add"){
+                imgDiv = `
+                    <div class="obj-center img-wrap">
+                        <div class="error-icon obj-center"><i class="fas fa-times"></i></div>
+                        <img src="${imgStr}" class="img-area">
+                    </div>
+                `
+            }else{
+                imgDiv = `
+                    <div class="obj-center img-wrap">
+                        <img src="${imgStr}" class="img-area">
+                    </div>
+                `
+            }
+            $(".track-display .file_wrap").append(imgDiv)
+            listenDeleteButton()
+
+        }
+        listenImg()
+
+        // 事件狀態設定
+
+        IncidentStatus = detail.data.IncidentStatus
+        if(IncidentStatus){
+            $(".form-check-input").click()
+            // 爛方法
+            setTimeout(() => {
+                $("#status-word").text("完成")
+                IncidentStatus = true
+            }, 100);
+        }
+
+        changeStatus(IncidentStatus)
+       
+    }
+
+     // 事件狀態設定
+    $(".form-check-input").on("click", function(e) {
+        e.stopPropagation()
+        IncidentStatus = !IncidentStatus
+        changeStatus()
+    });
+
+    let changeStatus = () => {
+        if(Motion == "add" && Type == "Track"){
+            $("#flexSwitchCheckChecked").prop("disabled", false)
+        }else{
+            $("#flexSwitchCheckChecked").prop("disabled", true)
+        }
+
+        if(IncidentStatus){
+            $("#status-word").text("完成")
+        }else{
+            $("#status-word").text("處理中")
+        }
+
+    }
+
+
+    $(document).ready(async function() {
+        if((Motion == "select") || (Motion == "add" && Type == "Track")){
+            await setDetailData()
+        }
+
+
+        if(!(Motion == "add" && Type == "Track")){
+            $(".report-display .file_wrap").append(fileDiv)
+        }
+       
+        //圖片popup預設隱藏
+        $("#picturePopup").hide();
+        
+
+        // 新增圖片
+        $("#fileAdd").on("change", async function(event) {
+            let fileChoseList = event.target.files
+            let check = true && ((fileChoseList.length + fileList.length) <=5)
+            $.each(fileChoseList, function(index, item) {
+                if(!item.type.startsWith("image/") || !(item.size < maxSize)){
+                    check = false
+                    alert("不是圖片檔|檔案大小大於3MB")
+                    return
+                }
+            });
+            if(check){
+                Array.from(fileChoseList).forEach((file) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        unListenFile()
+                        unListenDeleteButton()
+                        let imgStr = e.target.result
+                        fileList.push(imgStr)
+                        let imgDiv = `
+                            <div class="obj-center img-wrap">
+                                <div class="error-icon obj-center"><i class="fas fa-times"></i></div>
+                                <img src="${imgStr}" class="img-area">
+                            </div>
+                        `
+                        $(".report-display .file_wrap .chose-temp").remove()
+                        $(".report-display .file_wrap").append(imgDiv)
+                        if(fileList.length < 5){
+                            $(".report-display .file_wrap").append(fileDiv)
+                        }
+                        listenFile()
+                        listenImg()
+                        listenDeleteButton()
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }else{
+                alert("檔案格式不正確 || 超過3M || 超過5個")
+            }
+        });
+
+        // 追蹤區塊
+        
+        if(fileListTrack.length < 5){
+            $(".track-display .file_wrap").append(fileDiv)
+        }
+
+        // 新增追蹤圖片
+
+        $("#fileAddTrack").on("change", async function(event) {
+            let fileChoseList = event.target.files
+            let check = true && ((fileChoseList.length + fileListTrack.length) <=5)
+            $.each(fileChoseList, function(index, item) {
+                if(!item.type.startsWith("image/") || !(item.size < maxSize)){
+                    check = false
+                    alert("不是圖片檔|檔案大小大於3MB")
+                    return
+                }
+            });
+            if(check){
+                Array.from(fileChoseList).forEach((file) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        unListenFileTrack()
+                        unListenDeleteButton()
+                        let imgStr = e.target.result
+                        fileListTrack.push(imgStr)
+
+
+                        let imgDiv = `
+                            <div class="obj-center img-wrap">
+                                <div class="error-icon obj-center"><i class="fas fa-times"></i></div>
+                                <img src="${imgStr}" class="img-area">
+                            </div>
+                        `
+                        $(".track-display .file_wrap .chose-temp").remove()
+                        $(".track-display .file_wrap").append(imgDiv)
+                        if(fileListTrack.length < 5){
+                            $(".track-display .file_wrap").append(fileDiv)
+                        }
+                        listenFileTrack()
+                        listenImg()
+                        listenDeleteButton()
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }else{
+                alert("檔案格式不正確 || 超過3M || 超過5個")
+            }
+        });
+
+        //輸入控制
+        
+        if(Motion == "select"){
+            $("input").prop('disabled', true)
+            $("textarea").prop('disabled', true)
+            $("select").prop('disabled', true)
+            $(".chose-temp").hide()
+        }else if(Motion == "add" && Type == "Track"){
+            $(".report-display .input_wrap input").prop('disabled', true)
+            $(".report-display .input_wrap select").prop('disabled', true)
+            $(".report-display .explain_wrap textarea").prop('disabled', true)
+            $("#endDate").prop('disabled', false)
+            
+        }
+
+        //回上頁
+        $(".back-button").on("click", function(e) {
+            location.href='/Project/Issues'
+        });
+
+
+        //新增
+        $(".save-button").on("click", async function(e) {
+
+            if(Type == "Unusual" && Motion == "add"){
+                await AddAccident()
+            }else if(Motion == "add" && Type == "Track"){
+                await AddReply()
+            }
+
+        });
+
+    
+            listenFile()
+        listenFileTrack()
+
+ 
+
+    });
+
+</script>

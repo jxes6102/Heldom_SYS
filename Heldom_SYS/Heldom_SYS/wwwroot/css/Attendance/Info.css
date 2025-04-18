@@ -1,0 +1,408 @@
+﻿
+/* 手機 */
+@media (max-width: 991.98px) {
+    .main_wrap {
+        width: 100%;
+        height: auto;
+        padding: 30px 20px;
+        display: flex;
+
+        justify-content: center;
+        row-gap: 20px;
+        overflow: auto;
+    }
+
+    .main_area {
+        display: flex;
+        flex-direction: column;
+        max-width: 705px;
+        width: 100%;
+        row-gap: 40px;
+    }
+
+    .work_main_area {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .input_wrap {
+        display: flex;
+        flex-direction:column;
+    }
+
+    .form-select {
+        min-width: 100% !important;
+    }
+
+    .p-width {
+        width: 100px;
+    }
+
+    .message-display {
+        display: flex;
+        flex-direction: column;
+        row-gap: 12px;
+    }
+
+    .chose-display {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .form-control {
+        width: 100% !important;
+    }
+
+    .search-button {
+        background-color: var(--color-blue);
+        width: 160px;
+        height: 32px;
+        border-radius: 28px;
+    }
+
+    .page_circle {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: #D9D9D9;
+    }
+
+    .top_area {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .middle_area {
+        width: 100%;
+        display: flex;
+        background-color: var(--color-white);
+        overflow:auto;
+    }
+
+    .end_area {
+        column-gap: 4px;
+    }
+
+    .center_display {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 請假視窗樣式 */
+    .holiday-popup-wrap {
+        display: none; /* 預設隱藏 */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(36, 36, 38, 0.7);
+    }
+
+    .holiday-popup-content {
+        position: absolute;
+        background: var(--color-div-bg);
+        width: 75vw;
+        padding: 0px 0px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%,-50%);
+        border-radius: var(--border-radius);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .holiday-close {
+        width: 32px;
+        height: 32px;
+        font-size: 32px;
+        cursor: pointer;
+    }
+
+    .holiday-top {
+        width: 100%;
+        background-color: var(--color-background);
+        border-top-right-radius: 20px !important;
+        border-top-left-radius: 20px !important;
+        justify-content: end;
+        padding: 0px 12px;
+    }
+
+    .holiday-area {
+        width: 100%;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        row-gap: 20px;
+    }
+
+    .holiday-check {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .holiday-button {
+        background-color: var(--color-blue);
+        width: 30vw;
+        height: 36px;
+        border-radius: 28px;
+    }
+
+    .table {
+        margin-bottom: 0px !important;
+        min-width: 777px !important;
+    }
+
+    .table > :not(:last-child) > :last-child > * {
+        border-bottom-color: #8E8E93 !important;
+    }
+
+}
+
+/* PC */
+@media (min-width: 992px) {
+    .main_wrap {
+        width: 100%;
+        height: auto;
+        padding: 60px 40px;
+        display: flex;
+/*        flex-direction: column;*/
+        justify-content: center;
+        row-gap: 40px;
+    }
+
+    .main_area {
+        display: flex;
+        flex-direction: column;
+        max-width: 705px;
+        width: 100%;
+        row-gap: 40px;
+    }
+
+    .work_main_area {
+        display: flex;
+        flex-direction: column;
+        max-width: 1300px;
+        width: 100%;
+        row-gap: 40px;
+    }
+
+    .input_wrap {
+        width: 480px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .form-select {
+        width: 360px !important;
+    }
+
+    .p-width {
+        width: 100px;
+    }
+
+    .message-display {
+        display: flex;
+        flex-direction: column;
+        row-gap: 12px;
+    }
+
+    .chose-display {
+        width: 100%;
+        max-width: 1300px;
+        display: flex;
+        flex-wrap: wrap;
+        column-gap: 40px;
+        row-gap: 20px;
+    }
+
+    .form-control {
+        width: 360px !important;
+    }
+
+    .search-button {
+        background-color: var(--color-blue);
+        width: 160px;
+        height: 32px;
+        border-radius: 28px;
+    }
+
+    .page_circle {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: #D9D9D9;
+    }
+
+    .top_area {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .middle_area {
+        width: 100%;
+        display: flex;
+        background-color: var(--color-white);
+    }
+
+    .end_area {
+        column-gap: 4px;
+    }
+
+    .center_display {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 請假視窗樣式 */
+    .holiday-popup-wrap {
+        display: none; /* 預設隱藏 */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(36, 36, 38, 0.7);
+    }
+
+    .holiday-popup-content {
+        position: absolute;
+        background: var(--color-div-bg);
+        width: 600px;
+        padding: 0px 0px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%,-50%);
+        border-radius: var(--border-radius);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .holiday-close {
+        width: 32px;
+        height: 32px;
+        font-size: 32px;
+        cursor: pointer;
+    }
+
+    .holiday-top {
+        width: 100%;
+        height: 48px;
+        background-color: var(--color-background);
+        border-top-right-radius: 20px !important;
+        border-top-left-radius: 20px !important;
+        justify-content: end;
+        padding: 0px 20px;
+    }
+
+    .holiday-area {
+        width: 100%;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        row-gap: 40px;
+    }
+
+    .holiday-check {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .holiday-button {
+        background-color: var(--color-blue);
+        width: 240px;
+        height: 54px;
+        border-radius: 28px;
+    }
+
+    .table {
+        margin-bottom: 0px !important;
+        min-width: 555px !important;
+    }
+
+    .table > :not(:last-child) > :last-child > * {
+        border-bottom-color: #8E8E93 !important;
+    }
+}
+
+
+
+
+
+
+
+
+.pagination-arrow.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page_circle {
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: pointer;
+}
+
+    .page_circle.active {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .page_circle:hover {
+        background-color: #e0e0e0;
+    }
+
+    .page_circle.active:hover {
+        background-color: #0056b3;
+    }
+
+.holiday-click {
+    cursor: pointer;
+}
+
+    .holiday-click:hover {
+        background-color: #f5f5f5;
+    }
+
+.check-out-click {
+    cursor: pointer;
+}
+
+    .check-out-click:hover {
+        background-color: #f5f5f5;
+    }
+
+.btn-primary {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+}
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+.obj-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.holiday-check {
+    text-align: center; /* 若 flex 無效，作為後備 */
+}

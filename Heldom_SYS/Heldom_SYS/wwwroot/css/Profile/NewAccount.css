@@ -1,0 +1,325 @@
+﻿.main_wrap {
+    width: 100%;
+    height: auto;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    row-gap: 40px;
+}
+
+.top_area {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.middle_area {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    gap: 40px;
+}
+
+.end_area {
+    max-width: 1000px;
+    column-gap: 40px;
+}
+
+.middle_area_left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.middle_area_right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input_wrap {
+    width: 480px;
+    height: 48px;
+    justify-content: space-between;
+    display: flex;
+    align-items: center;
+    position:relative;
+}
+
+input {
+    width: 360px;
+    height: 48px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    border: 1px solid var(--color-line);
+    padding: 13px 12px 13px 12px;
+}
+
+    input:disabled {
+        background-color: var(--color-gray-light);
+    }
+
+.form-select-big {
+    width: 360px;
+    height: 48px;
+}
+
+.form-select-small {
+    width: 90px!important;
+    height: 48px;
+}
+
+.form-control {
+    width: 360px;
+}
+
+.form-control-small {
+    width: 250px;
+}
+
+.form-check-input:checked {
+    width: 80px !important;
+    height: 40px !important;
+    background-color: var(--color-green) !important;
+    border: 0 !important;
+}
+
+.form-check-input {
+    width: 80px !important;
+    height: 40px !important;
+    background-color: var(--color-gray-light) !important;
+}
+
+.switch_wrap {
+    width: 348px;
+    height: 40px;
+    display: flex;
+    justify-content: end;
+    align-items: center;
+}
+
+.form-check-label {
+    margin-right: 60px;
+}
+
+.photo-box {
+    width: 160px;
+    height: 160px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    background-color: #ffffff;
+    border: 1px solid var(--color-line);
+    margin-right: 200px;
+    display: flex;
+    cursor: pointer;
+}
+
+.photo_wrap {
+    width: 480px;
+    height: 160px;
+    justify-content: space-between;
+    display: flex;
+    margin-bottom: 24px;
+}
+
+.fa-plus {
+    font-size: 40px;
+    color: var(--color-menu-text);
+}
+
+.p_width {
+    width: 100px;
+}
+
+.end_area button {
+    width: 240px !important;
+    height: 54px !important;
+    border-radius: 28px;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+    .end_area button p {
+        margin: 0;
+        font-weight: bold;
+    }
+
+
+/* 儲存確認視窗樣式 */
+.clock-popup-wrap {
+    display: none; /* 預設隱藏 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.clock-popup-content {
+    max-width: 600px;
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.modal-content {
+    background: var(--color-div-bg);
+    border-radius: var(--border-radius);
+    width: 600px;
+}
+
+.modal-header {
+    border-bottom: none;
+    padding: 0;
+}
+
+.modal-body {
+    padding: 40px;
+}
+
+.modal-footer {
+    border-top: none;
+    padding: 0 40px 40px 40px;
+}
+
+.clock-close {
+    width: 32px;
+    height: 32px;
+    font-size: 32px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.clock-top {
+    width: 100%;
+    height: 48px;
+    background-color: var(--color-background);
+    border-top-right-radius: 20px !important;
+    border-top-left-radius: 20px !important;
+    padding: 0px 20px;
+}
+
+.clock-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    row-gap: 40px;
+}
+
+.clock-check {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0;
+}
+
+.clock-button {
+    background-color: var(--color-blue);
+    width: 240px;
+    height: 54px;
+    border-radius: 28px;
+}
+
+.clock-button_cancel {
+    background-color: rgba(0, 64, 221, 0.2) !important; /* 使用 20% 透明度 */
+    border: 1px solid var(--color-blue) !important;
+    width: 240px;
+    height: 54px;
+    border-radius: 28px;
+}
+
+/* 添加預覽圖片相關樣式 */
+.preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+}
+
+.upload-area {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.error-icon {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: var(--h4-size);
+    color: red;
+    font-size: var(--h4-size);
+}
+
+.delete-icon {
+    font-size: 20px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.picture-popup-wrap {
+    display: none; /* 預設隱藏 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(36, 36, 38, 0.7);
+}
+
+.picture-popup-content {
+    position: absolute;
+    background: var(--color-div-bg);
+    width: auto;
+    height: 75vh;
+    padding: 0px 0px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+}
+
+.picture-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+.photo-container {
+    height: 100%;
+    width: auto;
+    position: relative;
+    background-color: var(--color-div-bg);
+    overflow: hidden;
+    border: 1px solid #8E8E93;
+    border-radius: 10px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 20px;
+    color: #333333;
+    border-radius: 20px;
+}

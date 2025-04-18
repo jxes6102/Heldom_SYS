@@ -1,0 +1,390 @@
+﻿@* stylesheet *@
+<link rel="stylesheet" href="~/css/Project/Blueprints.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/Project/IssuesDetail.css" asp-append-version="true" />
+
+
+<div class="main_wrap border-radius box-shadow">
+
+        @{
+            if (TempData["toEdit"]?.ToString() == "BP")
+            {
+                <h4 class="bold">新增圖紙 </h4>
+                <div class="report-display">
+                    <div class="input_wrap">
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">圖紙類型</p>
+                        </div>
+                    <select id="categorySelectd" class="form-select get-id-value" aria-label="Default select example">
+                            <option value="PC1">結構工程圖</option>
+                            <option value="PC2">建築設計圖</option>
+                            <option value="PC3">公共設施圖</option>
+                            <option value="PC4">施工細部圖</option>
+                            <option value="PC5">機電設備圖</option>
+                            <option value="PC6">其他</option>
+                        </select>
+                    </div>
+
+                    <div class="input_wrap ">
+
+                        <div class="text-wrap ">
+                            <p class="color-gray-dark bold p-width">版本號碼</p>
+                        </div>
+                        <input maxlength="10" type="text" class="form-control get-vers-value" id="endDate" name="endDate" value="1">
+                    </div>
+                    <div class="input_wrap">
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">圖紙名稱</p>
+                        </div>
+                        <input maxlength="50" type="text" class="form-control get-name-value" id="endDate" name="endDate">
+                    </div>
+
+                     <div class="file_wrap">
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">事件圖片</p>
+                        </div>
+
+                    </div>  
+
+                </div>
+            }
+            else
+            {
+            <h4 class="bold">版本新增 </h4>
+                <div class="report-display">
+                    <div class="input_wrap">
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">圖紙類型</p>
+                        </div>
+                        <select id="categorySelectd" class="form-select get-id-value" aria-label="Default select example" disabled>
+                            <option value="PC1">結構工程圖</option>
+                            <option value="PC2">建築設計圖</option>
+                            <option value="PC3">公共設施圖</option>
+                            <option value="PC4">施工細部圖</option>
+                            <option value="PC5">機電設備圖</option>
+                            <option value="PC6">其他</option>
+                        </select>
+                    </div>
+
+                    <div class="input_wrap ">
+
+                        <div class="text-wrap ">
+                            <p class="color-gray-dark bold p-width">版本號碼</p>
+                        </div>
+                        <input maxlength="10" type="text" class="form-control display-printInfoVers get-vers-value" id="endDate" name="endDate ">
+                    </div>
+                    <div class="input_wrap">
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">圖紙名稱</p>
+                        </div>
+                        <input maxlength="50" type="text" class="form-control display-printInfoName get-name-value" id="endDate" name="endDate" disabled>
+                    </div>
+                    <div class="file_wrap">
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">事件圖片</p>
+                        </div>
+                    </div>
+
+                </div>
+            }
+        }
+
+
+    <div class="end-check">
+        <a href="~/Project/Blueprints?id=" id ="CateID">
+        <button class="back-button obj-center">
+            <p class="bold color-white">
+                取消 
+            </p>
+        </button>
+        </a>
+
+            <button class="save-button obj-center " id="save-newbp">
+                <p class="bold color-white">
+                    儲存
+                </p>
+            </button>
+
+
+    </div>
+
+    @* 圖片放大 *@
+    <div id="picturePopup" class="picture-popup-wrap">
+        <div class="picture-popup-content">
+            <img class="picture-img" src="#" alt="預覽圖片" />
+        </div>
+    </div>
+
+    <input type="file" class="form-control d-none" id="fileAdd" accept="image">
+    <input type="file" class="form-control d-none" id="fileAddTrack" accept="image">
+</div>
+
+
+<script>
+    let cID; //categary
+     let imgStr; //圖片暫存存放
+     
+    function GetID() {
+        let req = {             }
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: "/Project/GetUsingCategary",
+                type: "GET",
+                contentType: "application/json",
+                data: JSON.stringify(req),
+                success: resolve,
+                error: reject
+            });
+         });
+      }
+    async function  useFunc(){
+        cID = await GetID();
+        $("#CateID").prop("href", "/Project/Blueprints?id="+cID)
+        console.log(cID);
+        document.getElementById("categorySelectd").value = cID;
+    }
+    // 變數來控制預設選項
+    // 設定 select 的預設值
+
+
+
+   const params = new URLSearchParams(window.location.search);
+
+    //顯示預設資訊 class方法
+    $.ajax({
+        url:"/Project/DisplayPrintInfo",
+        type: "Post",
+        data:JSON.stringify({
+            id: params.get("id"),
+            BPName: params.get("BPName")
+            }),
+        contentType: "application/json",
+        success: function(response) {
+                console.log("請求成功:", response);
+                // console.log("ver 類型:", typeof response[0].name, response[0].name);
+                //   console.log("ver 類型:", typeof response[0].vers, response[0].vers);
+                // 確保 response 是陣列，取第一筆資料的 vers
+                if (response.length > 0) {
+                    let vers = response[0].vers;  // Cuz toList()
+                    // let name = response[0].name;
+                    $(".display-printInfoVers").prop("placeholder", "最新版本 : "+vers);
+                    $(".display-printInfoName").val(response[0].name);
+                }
+        },
+        error: function(xhr, error) {
+            console.error("請求失敗:", error);
+            console.error("錯誤訊息:", xhr.responseText); // 顯示錯誤的詳細訊息
+        }
+    })
+
+      $("#save-newbp").on("click", function() {
+          // alert("按鈕已被點擊！");
+          //判斷是否空值
+
+        let  id=$(".get-id-value").val()
+        let  BPName= $(".get-name-value").val()
+        let  vers=$(".get-vers-value").val()
+        let  print=imgStr
+         if(!id || !BPName || !vers || !print){
+                 alert("圖紙類型 or 版本號碼 or 圖紙名稱 or 事件圖片 不能為")
+             return false;
+         }
+          if(vers<0.1 || vers>999999999){
+                 alert("請輸入0.1~999999999內的數字")
+                 return false;
+            }
+            console.log(JSON.stringify({
+                     id:$(".get-id-value").val(),
+                     BPName: $(".get-name-value").val(),
+                     vers:$(".get-vers-value").val(),
+                     print:imgStr,
+            }));
+            //新增新藍圖
+           $.ajax({
+              url:"/Project/InsertNew",
+              type: "Post",
+              data:JSON.stringify({
+                   id:$(".get-id-value").val(),
+                   BPName: $(".get-name-value").val(),
+                   print:imgStr,
+                   vers:$(".get-vers-value").val()
+               }),
+              contentType: "application/json",
+              success: function(response) {
+                    if(response=="1"){
+                         alert("版本號碼重複");
+                    }
+                    else{
+                        alert("成功新增");
+                         console.log("請求成功新增新藍圖:", response);
+                         //觸發回到上一頁
+                        window.location.href = '/Project/Blueprints?id='+cID;
+                    }
+              },
+              error: function(xhr, error) {
+                  console.error("請求失敗:", error);
+                  console.error("錯誤訊息:", xhr.responseText); // 顯示錯誤的詳細訊息
+              }
+          })
+     });
+
+
+     
+
+    let Motion = @Html.Raw(Json.Serialize(ViewBag.Motion));
+    let Type = @Html.Raw(Json.Serialize(ViewBag.Type));
+
+    $(document).ready(function () {
+
+        // useFunc
+        useFunc();
+
+        // 回報區塊
+        let fileDiv = `
+            <div class="file-area obj-center chose-temp">
+                <h3><i class="fas fa-plus"></i></h3>
+            </div>
+        `;
+
+        $(".report-display .file_wrap").append(fileDiv);
+
+        let listenFile = () => {
+            $(".report-display .file_wrap .file-area").on("click", function (e) {
+                $("#fileAdd").click();
+            });
+        };
+
+        let listenImg = () => {
+            $(".img-area").on("click", function (e) {
+                 $(".picture-img").prop("src", this.src);
+                $("#picturePopup").fadeIn();
+            });
+
+            $(".picture-close").click(function () {
+                $("#picturePopup").fadeOut();
+            });
+
+            $("#picturePopup").click(function (event) {
+                if (event.target === this) {
+                    $(this).fadeOut();
+                }
+            });
+        };
+
+        let listenDelete = () => {
+            $(".delete-icon").on("click", function (e) {
+                e.stopPropagation(); // 防止觸發圖片放大事件
+                  //點擊X後 刪除暫存
+                  imgStr=null;
+                $(".report-display .file_wrap .img-wrap").remove();
+                $(".report-display .file_wrap").append(fileDiv);
+                listenFile();
+            });
+        };
+
+        listenFile();
+
+        $("#fileAdd").on("change", function (event) {
+            let file = event.target.files[0];
+
+            if (file && file.type.startsWith("image/")) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+
+                    imgStr = e.target.result;
+
+                    //圖片儲存
+                     // console.log(imgStr);
+
+                    let imgDiv = `
+                        <div class="text-wrap">
+                            <p class="color-gray-dark bold p-width">事件圖片</p>
+                        </div>
+                        <div class="obj-center img-wrap">
+                            <i class="fas fa-times delete-icon"></i>
+                            <img src="${imgStr}" class="img-area">
+                        </div>
+                    `;
+                     /*    
+                     <div class="file_wrap">
+                         <div class="text-wrap">
+                             <p class="color-gray-dark bold p-width">事件圖片</p>
+                         </div>
+                     </div>*/
+                     $(".report-display .file_wrap .chose-temp").remove();
+                    $(".report-display .file_wrap").html(imgDiv); // 確保只有一張圖片
+
+                    listenImg();
+                    listenDelete();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                console.log("請選擇圖片檔案");
+            }
+        });
+
+        // 追蹤區塊
+        let fileDivTrack = `
+            <div class="file-area obj-center chose-temp">
+                <h3><i class="fas fa-plus"></i></h3>
+            </div>
+        `;
+
+        $(".track-display .file_wrap").append(fileDivTrack);
+
+        let listenFileTrack = () => {
+            $(".track-display .file_wrap .file-area").on("click", function (e) {
+                $("#fileAddTrack").click();
+            });
+        };
+
+        let listenDeleteTrack = () => {
+            $(".track-display .file_wrap .delete-icon").on("click", function (e) {
+                e.stopPropagation();
+
+
+                $(".track-display .file_wrap .img-wrap").remove();
+                $(".track-display .file_wrap").append(fileDivTrack);
+                listenFileTrack();
+            });
+        };
+
+        listenFileTrack();
+
+        $("#fileAddTrack").on("change", function (event) {
+            let file = event.target.files[0];
+
+            if (file && file.type.startsWith("image/")) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+
+                    let imgStr = e.target.result;
+                    let imgDiv = `
+                        <div class="obj-center img-wrap">
+                            <i class="fas fa-times delete-icon"></i>
+                            <img src="${imgStr}" class="img-area">
+                        </div>
+                    `;
+
+                    $(".track-display .file_wrap .chose-temp").remove();
+                    $(".track-display .file_wrap").html(imgDiv);
+
+                    listenImg();
+                    listenDeleteTrack();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                console.log("請選擇圖片檔案");
+            }
+        });
+
+        // 輸入控制
+        if (Motion == "select") {
+            $("input, textarea, select").prop('disabled', true);
+            $(".chose-temp").hide();
+        } else if (Motion == "add" && Type == "Track") {
+            $(".report-display .input_wrap input, .report-display .input_wrap select, .report-display .explain_wrap textarea").prop('disabled', true);
+        }
+    });
+
+
+</script>

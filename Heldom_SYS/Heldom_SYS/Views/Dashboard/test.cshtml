@@ -1,0 +1,110 @@
+﻿@* 這段代碼可以放在你的 View（如 Index.cshtml） *@
+
+<div id="bell-container">
+    <div class="bell"></div>
+    <canvas id="rippleCanvas"></canvas>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const canvas = document.getElementById('rippleCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // 讓 Canvas 充滿 bell-container
+            const container = document.getElementById('bell-container');
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+
+            const bellX = canvas.width / 2;
+            const bellY = canvas.height / 2;
+
+            let ripples = [];
+            let animationFrameId; // 儲存 requestAnimationFrame ID
+
+            function createRipple() {
+                ripples.push({
+                    x: bellX,
+                    y: bellY,
+                    radius: 0,
+                    opacity: 1
+                });
+            }
+
+            function drawRipples() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ripples.forEach((ripple, index) => {
+                    ctx.beginPath();
+                    ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 165, 0, ${ripple.opacity})`; // 橘色水波
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    ripple.radius += 2;  // 增加水波半徑
+                    ripple.opacity -= 0.03;  // 逐漸減少透明度
+
+                    // 當透明度小於等於 0 時，從水波陣列中移除
+                    if (ripple.opacity <= 0) {
+                        ripples.splice(index, 1);
+                    }
+                });
+
+                // 不斷更新動畫，並保存下一幀的 ID
+                animationFrameId = requestAnimationFrame(drawRipples);
+            }
+
+            // 每 1.5 秒自動產生一個水波
+            setInterval(createRipple, 2000);
+
+            function startAnimation() {
+                drawRipples();
+            }
+
+            function stopAnimation() {
+                cancelAnimationFrame(animationFrameId); // 停止動畫
+            }
+
+            // 當頁面可見時開始動畫，不可見時停止動畫
+            document.addEventListener("visibilitychange", function () {
+                if (document.hidden) {
+                    stopAnimation(); // 停止動畫
+                } else {
+                    startAnimation(); // 開始動畫
+                }
+            });
+
+            startAnimation();  // 頁面初始載入時開始動畫
+        });
+    </script>
+}
+
+<style>
+    #bell-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto;
+        border-radius: 50%; /* 圓形容器 */
+    }
+
+    .bell {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background: url('https://cdn-icons-png.flaticon.com/512/1827/1827504.png') no-repeat center;
+        background-size: contain;
+    }
+
+    canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%; /* 圓形 Canvas */
+    }
+</style>

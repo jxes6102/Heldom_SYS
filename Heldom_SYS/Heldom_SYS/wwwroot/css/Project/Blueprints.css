@@ -1,0 +1,422 @@
+﻿/* ----------------------------- */
+
+.dd {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px; /* 調整欄位間距 */
+}
+
+.container {
+    display: flex;
+    flex-direction: column; /* 讓 .dd 垂直排列 */
+    gap: 10px; /* 控制 .dd 之間的間距 */
+}
+
+.flex-row {
+    display: flex;
+    align-items: center; /* 垂直置中 */
+    gap: 10px; /* 調整欄位間距 */
+}
+
+.info-title {
+    width: 100px;
+    height: auto;
+    color: var(--color-gray-light);
+}
+
+.info-txt {
+    width: 100px;
+    height: auto;
+    color: var(--color-gray-dark);
+    font-weight: var(--font-weight-bold);
+}
+
+/* 圖片放大視窗：預設隱藏 */
+
+
+.picture-popup-wrap {
+    display: none; /* 預設隱藏 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(36, 36, 38, 0.7);
+}
+
+/* 放大圖片內容 */
+
+
+.picture-popup-content {
+    position: absolute;
+    background: var(--color-div-bg);
+    width: auto;
+    height: 75vh;
+    padding: 0px 0px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+}
+
+.picture-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+/********** Template CSS **********/
+:root {
+    --primary: #0040DD;
+    --light: #EFF5FF;
+    --dark: #1B2C51;
+}
+
+.fw-medium {
+    font-weight: 500 !important;
+}
+
+.fw-bold {
+    font-weight: 700 !important;
+}
+
+.fw-black {
+    font-weight: 900 !important;
+}
+
+.back-to-top {
+    position: fixed;
+    display: none;
+    right: 45px;
+    bottom: 45px;
+    z-index: 99;
+}
+
+
+/*** Spinner ***/
+#spinner {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .5s ease-out, visibility 0s linear .5s;
+    z-index: 99999;
+}
+
+    #spinner.show {
+        transition: opacity .5s ease-out, visibility 0s linear 0s;
+        visibility: visible;
+        opacity: 1;
+    }
+
+
+/*** Button ***/
+.btn {
+    font-weight: 500;
+    transition: .5s;
+}
+
+    .btn.btn-primary,
+    .btn.btn-secondary {
+        color: #FFFFFF;
+    }
+
+.btn-square {
+    width: 38px;
+    height: 38px;
+}
+
+.btn-sm-square {
+    width: 32px;
+    height: 32px;
+}
+
+.btn-lg-square {
+    width: 48px;
+    height: 48px;
+}
+
+.btn-square,
+.btn-sm-square,
+.btn-lg-square {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: normal;
+}
+
+
+
+/*** Service ***/
+.service-item {
+    transition: .5s;
+}
+
+    .service-item:hover {
+        margin-top: -10px;
+        box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .08);
+    }
+
+    .service-item .btn {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        background: #FFFFFF;
+        border-radius: 40px;
+        white-space: nowrap;
+        overflow: hidden;
+        transition: .5s;
+    }
+
+    .service-item:hover .btn {
+        width: 140px;
+    }
+
+
+/*** Feature ***/
+@media (min-width: 992px) {
+    .container.feature {
+        max-width: 100% !important;
+    }
+
+    .feature-text {
+        padding-left: calc(((100% - 960px) / 2) + .75rem);
+    }
+}
+
+@media (min-width: 1200px) {
+    .feature-text {
+        padding-left: calc(((100% - 1140px) / 2) + .75rem);
+    }
+}
+
+@media (min-width: 1400px) {
+    .feature-text {
+        padding-left: calc(((100% - 1320px) / 2) + .75rem);
+    }
+}
+
+
+/*** Team ***/
+.team-item img {
+    position: relative;
+    top: 0;
+    transition: .5s;
+}
+
+.team-item:hover img {
+    top: -30px;
+}
+
+.team-item .team-text {
+    position: relative;
+    height: 100px;
+    transition: .5s;
+}
+
+.team-item:hover .team-text {
+    margin-top: -60px;
+    height: 160px;
+}
+
+.team-item .team-text .team-social {
+    opacity: 0;
+    transition: .5s;
+}
+
+.team-item:hover .team-text .team-social {
+    opacity: 1;
+}
+
+.team-item .team-social .btn {
+    display: inline-flex;
+    color: var(--primary);
+    background: #FFFFFF;
+    border-radius: 40px;
+}
+
+    .team-item .team-social .btn:hover {
+        color: #FFFFFF;
+        background: var(--primary);
+    }
+
+
+/*** Appointment ***/
+.bootstrap-datetimepicker-widget.bottom {
+    top: auto !important;
+}
+
+.bootstrap-datetimepicker-widget .table * {
+    border-bottom-width: 0px;
+}
+
+.bootstrap-datetimepicker-widget .table th {
+    font-weight: 500;
+}
+
+.bootstrap-datetimepicker-widget.dropdown-menu {
+    padding: 10px;
+    border-radius: 2px;
+}
+
+.bootstrap-datetimepicker-widget table td.active,
+.bootstrap-datetimepicker-widget table td.active:hover {
+    background: var(--primary);
+}
+
+.bootstrap-datetimepicker-widget table td.today::before {
+    border-bottom-color: var(--primary);
+}
+
+
+/*** Testimonial ***/
+.testimonial-carousel::before {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+    z-index: 1;
+}
+
+.testimonial-carousel::after {
+    position: absolute;
+    content: "";
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(to left, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+    z-index: 1;
+}
+
+@media (min-width: 768px) {
+    .testimonial-carousel::before,
+    .testimonial-carousel::after {
+        width: 200px;
+    }
+}
+
+@media (min-width: 992px) {
+    .testimonial-carousel::before,
+    .testimonial-carousel::after {
+        width: 300px;
+    }
+}
+
+.testimonial-carousel .owl-item .testimonial-text {
+    background: var(--light);
+    transform: scale(.8);
+    transition: .5s;
+}
+
+.testimonial-carousel .owl-item.center .testimonial-text {
+    background: var(--primary);
+    transform: scale(1);
+}
+
+.testimonial-carousel .owl-item .testimonial-text *,
+.testimonial-carousel .owl-item .testimonial-item img {
+    transition: .5s;
+}
+
+.testimonial-carousel .owl-item.center .testimonial-text * {
+    color: var(--light) !important;
+}
+
+.testimonial-carousel .owl-item.center .testimonial-item img {
+    background: var(--primary) !important;
+}
+
+.testimonial-carousel .owl-nav {
+    position: absolute;
+    width: 350px;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: space-between;
+    opacity: 0;
+    transition: .5s;
+    z-index: 1;
+}
+
+.testimonial-carousel:hover .owl-nav {
+    width: 300px;
+    opacity: 1;
+}
+
+.testimonial-carousel .owl-nav .owl-prev,
+.testimonial-carousel .owl-nav .owl-next {
+    position: relative;
+    color: var(--primary);
+    font-size: 45px;
+    transition: .5s;
+}
+
+    .testimonial-carousel .owl-nav .owl-prev:hover,
+    .testimonial-carousel .owl-nav .owl-next:hover {
+        color: var(--dark);
+    }
+
+page_circle{
+    background-color:none;
+}
+
+.top_area2 {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+   align-items:center;
+   justify-content:space-between;
+}
+
+.btn-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left:20px;
+}
+
+.back-icon {
+    margin-left: 20px;
+}
+
+/*.btn-outline {
+    background-color: rgba(0, 64, 221, 0.2);
+    !important;*/ /* 使用 20% 透明度 */
+    /*border: 1px solid var(--color-blue) !important;
+    width: 240px !important;
+    height: 54px !important;
+    border-radius: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}*/
+
+.PrintStatus {
+    color: var(--color-gray-light);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+
+.delete-icon {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 20px;
+    color: red;
+    border-radius: 50%;
+    padding: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.hover-color:hover {
+    background-color: rgba(0, 64, 221, 0.1);
+}

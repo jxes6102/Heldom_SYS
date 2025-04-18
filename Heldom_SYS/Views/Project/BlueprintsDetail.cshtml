@@ -90,7 +90,7 @@
 													<div class="col-7  changeClickCheck">
 														<div class="features-content d-flex flex-column">
 															<p class="PrintStatus">未啟用</p>
-															<small><i class="fas fa-hashtag dynamic-check-change"> v.@blueprint.Version</i></small>
+															<small><i class="fas fa-hashtag dynamic-check-change"> v @blueprint.Version</i></small>
 															<small><i class="fa fa-clock"> @blueprint.UploadDate</i> </small>
 														</div>
 													</div>
@@ -220,8 +220,8 @@
 		$(".dynamic-check-change").on("click", function() {
 			let versionTage = $(this).text();
 			// console.log("version", versionTage); version v.11
-			 changingVersion1 = versionTage.split(".");
-			 changingVersion = changingVersion1[1];
+			 changingVersion1 = versionTage.split(' ');
+			 changingVersion = changingVersion1[2];
 			console.log(changingVersion);
 			console.log(typeof changingVersion);
 			

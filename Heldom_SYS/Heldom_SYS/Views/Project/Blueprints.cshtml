@@ -1,0 +1,177 @@
+﻿@* stylesheet *@
+<link rel="stylesheet" href="~/css/Project/Blueprints.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/Project/Issues.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/Dashboard/Cctv.css" asp-append-version="true" />
+
+
+@* https://localhost:7142/Project/Blueprints *@
+
+<div class="main_wrap">
+	<div class="container">
+		<div class="mb-4" data-wow-delay="0.1s" style="max-width: 100%;">
+			<div class="top_area2">
+				<div>
+				<h4 class="db-title-l">@TempData["categary"]</h4>
+				</div>
+				<div class="btn-link">
+				
+					<a  href="~/Project/BlueprintsEdit?id=@TempData["ID"]&fromName=BP"><button id="unusualPopupButton" class="button button_style bold">新增</button></a>
+					
+				@* 返回*@
+				<a asp-controller="Project" asp-action="BlueprintsCategories">
+				<p class="back-icon"><i class="fas fa-reply end-arrow" style="align-items:center"></i></p>
+				</a>
+				</div>
+			</div>
+		</div>
+
+
+		<div class="row g-4">
+
+             @model IEnumerable<dynamic> 
+
+			@* 動態生成  *@
+			@* --------------------------------- *@
+			@if (Model != null && Model.Any())
+			{
+				@foreach (var blueprint in Model)
+				{
+						
+							 <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.1s"> 
+									<a  href="~/Project/BlueprintsDetail?id=@TempData["ID"]&BPName=@blueprint.Name">
+								 <div class="service-item bg-light rounded h-100 p-5"> 
+									 <div class="d-inline-flex align-items-center justify-content-center bg-white rounded-circle mb-4">
+										 <img src="data:jpg;base64,@Convert.ToBase64String(blueprint.Image)" class="img-fluid" style="max-width: 100%; height: auto;"> 
+									 </div> 
+									 <div class="container"> 
+										 <div class="flex-row"> 
+											 <p class="mb-4 info-title">圖紙名稱</p> 
+											 <p class="mb-4 info-txt">@blueprint.Name</p> 
+										 </div> 
+
+										 <div class="flex-row"> 
+											 <p class="mb-4 info-title">負責人員</p> 
+											 <p class="mb-4 info-txt">@blueprint.Manager</p> 
+										 </div> 
+
+										 <div class="flex-row"> 
+											 <p class="mb-4 info-title">版本號碼</p> 
+											 <p class="mb-4 info-txt">@blueprint.Version</p> 
+										 </div> 
+
+										 <div class="flex-row"> 
+											 <p class="mb-4 info-title">上傳日期</p> 
+											 <p class="mb-4 info-txt">@blueprint.UploadDate</p> 
+										 </div> 
+									 </div> 
+								 </div> 
+								</a>
+							 </div> 
+						
+				} 
+			}
+			else
+			{ 
+					 <p class="text-center">目前沒有可用的圖紙資料</p> 
+			} 
+			@* --------------------------------- *@
+
+			<div class="end_area obj-center">
+
+
+		</div>
+	</div>
+</div>
+
+<script>
+		//分頁生成
+		$(document).ready(function () {
+		let itemsPerPage = 9; // 每頁顯示的圖紙數量
+		let currentPage = 0; // 當前頁面索引（從0開始）
+		let totalItems = $(".col-lg-4").length; // 總資料筆數
+		let totalPage = Math.ceil(totalItems / itemsPerPage); // 總頁數
+
+		function showPage(page) {
+			$(".col-lg-4").hide(); // 先隱藏所有資料
+			let start = page * itemsPerPage;
+			let end = start + itemsPerPage;
+
+			$(".col-lg-4").slice(start, end).show(); // 只顯示當前頁面範圍內的項目
+
+			// 更新當前選中的頁面按鈕樣式
+			$(".page_circle").removeClass("active");
+			$(".page_circle").eq(page).addClass("active");
+
+			for(let i = 0 ;i<totalPage;i++){
+					let allPageElement = document.querySelector(`[data-page="${i}"]`);
+					allPageElement.style.backgroundColor = "";
+			}
+
+			let pageElement = document.querySelector(`[data-page="${page}"]`);
+			// 取得 data-page="page" 的元素
+
+			console.log(page);
+			
+			pageElement.style.backgroundColor = '#D9D9D9';
+
+		}
+
+		// 生成分頁按鈕
+		if (totalPage > 1) {
+			$(".end_area").append(`<h4 class="prev-btn"><i class="fas fa-angle-left"></i></h4>`);
+
+			for (let i = 0; i < totalPage; i++) {
+				$(".end_area").append(`
+					<div class="page_circle obj-center" data-page="${i}">
+						<p class="bold">${i + 1}</p>
+					</div>
+				`);
+			}
+
+			$(".end_area").append(`<h4 class="next-btn"><i class="fas fa-angle-right"></i></h4>`);
+		}
+
+		// 頁面點擊事件
+		$(".page_circle").click(function () {
+			let page = $(this).data("page");
+			currentPage = page;
+			showPage(currentPage);
+		});
+
+		// 上一頁按鈕
+		$(".prev-btn").click(function () {
+			if (currentPage > 0) {
+				currentPage--;
+				showPage(currentPage);
+			}
+		});
+
+		// 下一頁按鈕
+		$(".next-btn").click(function () {
+			if (currentPage < totalPage - 1) {
+				currentPage++;
+				showPage(currentPage);
+			}
+		});
+
+		// 初次載入時顯示第一頁
+		showPage(currentPage);
+
+
+	});
+		
+
+
+
+
+</script>
+
+<<style>
+	/* 頁次按鈕圓圈 */
+.end_area div:hover {
+	transform: scale(1.05);
+	cursor: pointer;
+	background-color: #D9D9D9;
+}
+
+</style>
