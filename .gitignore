@@ -1,3 +1,53 @@
-Heldom_SYS/bin/
-Heldom_SYS/obj/
-.vs
+## 🔧 Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## ⚙️ 編譯輸出
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+*.log
+
+## 📦 NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+## 🚀 發佈與產出
+publish/
+wwwroot/lib/
+
+## 🛡️ appsettings - 建議忽略開發與機密用設定檔
+appsettings.Development.json
+appsettings.*.Secrets.json
+appsettings.Local.json
+secrets.json
+
+## 💻 VS Code / JetBrains
+.vscode/
+.idea/
+*.sln.iml
+
+## 🧪 測試報告 / 覆蓋率
+coverage/
+
+## 🧹 作業系統雜檔
+.DS_Store
+*.swp
+*.bak
+*.tmp
+*.pid
+
+## 🐳 Docker（若有）
+**/*.dockerfile
+docker-compose.*
+
+## 📁 資料庫 / 本地檔案
+*.db
+*.sqlite
+*.pdb
