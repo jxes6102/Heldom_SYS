@@ -349,6 +349,7 @@ namespace Heldom_SYS.Controllers
         public async Task<IActionResult> GetAttendanceRecords(string employeeName, DateTime? startDate, DateTime? endDate)
         {
             var query = _context.AttendanceRecords
+                .AsNoTracking()
                 .Include(ar => ar.Employee)
                 .ThenInclude(e => e.EmployeeDetail) // 正式員工資料
                 .Include(ar => ar.Employee)

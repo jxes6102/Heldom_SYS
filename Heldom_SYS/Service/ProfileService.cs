@@ -1,57 +1,54 @@
-﻿using System.Reflection;
-using Dapper;
-using Heldom_SYS.CustomModel;
+﻿using Heldom_SYS.CustomModel;
 using Heldom_SYS.Interface;
 using Heldom_SYS.Models;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using System.Data;
 
 namespace Heldom_SYS.Service
 {
     public class ProfileService : IProfileService
     {
-        private readonly SqlConnection DataBase;
+        private const int PageSize = 10;
+
         private readonly IUserStoreService UserRoleStore;
         private readonly ConstructionDbContext DbContext;
         private readonly ILogger<ProfileService> Logger;
 
-        public ProfileService(SqlConnection connection, IUserStoreService _UserRoleStore, ConstructionDbContext dbContext, ILogger<ProfileService> logger)
+        public ProfileService(IUserStoreService _UserRoleStore, ConstructionDbContext dbContext, ILogger<ProfileService> logger)
         {
-            DataBase = connection;
             UserRoleStore = _UserRoleStore;
             DbContext = dbContext;
             Logger = logger;
         }
-        
+
         // 查詢員工個人詳細資料
         public async Task<IEnumerable<ProfileIndex>> GetIndexData()
         {
             string userID = UserRoleStore.UserID;
-            var employeeWithDetail = await DbContext.Employees
+            return await DbContext.Employees
+                .AsNoTracking()
                 .Where(employee => employee.EmployeeId == userID)
-                .Join(DbContext.EmployeeDetails,
-                employee => employee.EmployeeId,
-                detail => detail.EmployeeId,
-                (employee, detail) => new ProfileIndex
-                {
-                    employeeName = detail.EmployeeName,
-                    position = employee.Position,
-                    employeeId = employee.EmployeeId,
-                    birthDate = detail.BirthDate,
-                    phoneNumber = detail.PhoneNumber,
-                    address = detail.Address,
-                    emergencyContact = detail.EmergencyContact,
-                    emergencyContactPhone = detail.EmergencyContactPhone,
-                    Department = detail.Department,
-                    EmployeePhoto = Convert.ToBase64String(detail.EmployeePhoto),
-                    Mail = detail.Mail,
-                    AnnualLeave = detail.AnnualLeave,
-                    HireDate = employee.HireDate,
-                    YearsBetween = (int)((employee.ResignationDate ?? DateTime.Now) - employee.HireDate).TotalDays / 365
-                }).ToListAsync();
-            return employeeWithDetail;
+                .Join(DbContext.EmployeeDetails.AsNoTracking(),
+                    employee => employee.EmployeeId,
+                    detail => detail.EmployeeId,
+                    (employee, detail) => new ProfileIndex
+                    {
+                        employeeName = detail.EmployeeName,
+                        position = employee.Position,
+                        employeeId = employee.EmployeeId,
+                        birthDate = detail.BirthDate,
+                        phoneNumber = detail.PhoneNumber,
+                        address = detail.Address,
+                        emergencyContact = detail.EmergencyContact,
+                        emergencyContactPhone = detail.EmergencyContactPhone,
+                        Department = detail.Department,
+                        EmployeePhoto = Convert.ToBase64String(detail.EmployeePhoto),
+                        Mail = detail.Mail,
+                        AnnualLeave = detail.AnnualLeave,
+                        HireDate = employee.HireDate,
+                        YearsBetween = (int)((employee.ResignationDate ?? DateTime.Now) - employee.HireDate).TotalDays / 365
+                    })
+                .ToListAsync();
         }
 
         // 顯示員工個人資料
@@ -61,27 +58,29 @@ namespace Heldom_SYS.Service
             {
                 string userID = UserRoleStore.UserID;
 
-                var employeeWithDetail = await DbContext.Employees
+                return await DbContext.Employees
+                    .AsNoTracking()
                     .Where(employee => employee.EmployeeId == userID)
-                    .Join(DbContext.EmployeeDetails,
-                    employee => employee.EmployeeId,
-                    detail => detail.EmployeeId,
-                    (employee, detail) => new ProfileSettings
-                    {
-                        employeeName = detail.EmployeeName,
-                        position = employee.Position,
-                        employeeId = employee.EmployeeId,
-                        birthDate = detail.BirthDate,
-                        phoneNumber = detail.PhoneNumber,
-                        address = detail.Address,
-                        emergencyContact = detail.EmergencyContact,
-                        emergencyContactPhone = detail.EmergencyContactPhone
-                    }).ToListAsync();
-                return employeeWithDetail;
+                    .Join(DbContext.EmployeeDetails.AsNoTracking(),
+                        employee => employee.EmployeeId,
+                        detail => detail.EmployeeId,
+                        (employee, detail) => new ProfileSettings
+                        {
+                            employeeName = detail.EmployeeName,
+                            position = employee.Position,
+                            employeeId = employee.EmployeeId,
+                            birthDate = detail.BirthDate,
+                            phoneNumber = detail.PhoneNumber,
+                            address = detail.Address,
+                            emergencyContact = detail.EmergencyContact,
+                            emergencyContactPhone = detail.EmergencyContactPhone
+                        })
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                throw new Exception("資料取得失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to get profile settings for employee {EmployeeId}", UserRoleStore.UserID);
+                throw;
             }
         }
 
@@ -95,91 +94,56 @@ namespace Heldom_SYS.Service
                 var employeeDetail = await DbContext.EmployeeDetails
                     .FirstOrDefaultAsync(ed => ed.EmployeeId == userID);
 
-                if (employeeDetail != null)
+                if (employeeDetail == null)
                 {
-                    employeeDetail.PhoneNumber = userInput.phoneNumber;
-                    employeeDetail.Address = userInput.address;
-                    employeeDetail.EmergencyContact = userInput.emergencyContact;
-                    employeeDetail.EmergencyContactPhone = userInput.emergencyContactPhone;
+                    return false;
+                }
 
-                    await DbContext.SaveChangesAsync();
-                    return true;
-                }
-                else
-                {
-                    throw new Exception("找不到員工資料");
-                }
+                employeeDetail.PhoneNumber = userInput.phoneNumber;
+                employeeDetail.Address = userInput.address;
+                employeeDetail.EmergencyContact = userInput.emergencyContact;
+                employeeDetail.EmergencyContactPhone = userInput.emergencyContactPhone;
+
+                await DbContext.SaveChangesAsync();
+                return true;
             }
             catch (Exception ex)
             {
-                throw new Exception("更新失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to update profile settings for employee {EmployeeId}", UserRoleStore.UserID);
+                throw;
             }
         }
 
         // 查詢員工們的個人資料
         public async Task<IEnumerable<ProfileAccount>> GetAccountsData(ProfileOptions options)
         {
-            string userID = UserRoleStore.UserID;
-
-            string sql = @"SELECT
-                            CASE 
-                                WHEN ed.EmployeePhoto IS NOT NULL 
-                                THEN CAST(N'' AS XML).value('xs:base64Binary(xs:hexBinary(sql:column(""ed.EmployeePhoto"")))', 'VARCHAR(MAX)')
-                                ELSE NULL 
-                            END as EmployeePhoto
-                            ,ed.EmployeeName,ed.EmployeeID,ed.PhoneNumber,
-	                        ed.Department,e.Position,e.HireDate,e.IsActive
-                            FROM Employee e join EmployeeDetail ed 
-                            ON e.EmployeeID = ed.EmployeeID
-                            WHERE 1 = 1";
-            
-            if (!options.IsActive.IsNullOrEmpty())
-            {
-                sql += @" and e.IsActive = @IsActive";
-            }
-
-            if (!options.Department.IsNullOrEmpty())
-            {
-                sql += @" and ed.Department = @Department";
-            }
-
-            if (!options.EmployeeId.IsNullOrEmpty())
-            {
-                sql += @" and e.EmployeeId = @EmployeeId";
-            }
-
-            if (!options.EmployeeName.IsNullOrEmpty())
-            {
-                sql += @" and ed.EmployeeName like @EmployeeName";
-            }
-
-            sql += @" ORDER BY e.EmployeeID ASC
-                        OFFSET( @Page - 1) * 10 ROWS
-                        FETCH NEXT 10 ROWS ONLY";
-
             try
             {
-
-                IEnumerable<ProfileAccount>? employeesWithDetail = await DataBase.QueryAsync<ProfileAccount>(sql,
-                    new
-                    {
-                        IsActive = options.IsActive,
-                        Department = options.Department,
-                        EmployeeId = options.EmployeeId,
-                        EmployeeName = $"%{options.EmployeeName}%",
-                        Page = options.currentPage,
-                    });
-
-                foreach(var employee in employeesWithDetail)
-                {
-                    employee.EmployeePhoto = $"data:image/jpeg;base64,{employee.EmployeePhoto}";
-                }
-
-                return employeesWithDetail;
+                int page = GetPage(options.currentPage);
+                return await ApplyAccountFilters(DbContext.Employees.AsNoTracking(), options)
+                    .Join(DbContext.EmployeeDetails.AsNoTracking(),
+                        employee => employee.EmployeeId,
+                        detail => detail.EmployeeId,
+                        (employee, detail) => new ProfileAccount
+                        {
+                            EmployeePhoto = $"data:image/jpeg;base64,{Convert.ToBase64String(detail.EmployeePhoto)}",
+                            EmployeeName = detail.EmployeeName,
+                            EmployeeId = detail.EmployeeId,
+                            PhoneNumber = detail.PhoneNumber,
+                            Department = detail.Department,
+                            Position = employee.Position,
+                            HireDate = employee.HireDate,
+                            IsActive = employee.IsActive
+                        })
+                    .OrderBy(account => account.EmployeeId)
+                    .Skip((page - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                throw new Exception("資料取得失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to get profile accounts");
+                throw;
             }
         }
 
@@ -190,48 +154,21 @@ namespace Heldom_SYS.Service
 
         public async Task<int> GetTotalPage(ProfileOptions options)
         {
-            string sql = @"SELECT COUNT(*) as Total
-                            FROM Employee e join EmployeeDetail ed 
-                            ON e.EmployeeID = ed.EmployeeID
-                            WHERE 1 = 1";
-
-            if (!options.IsActive.IsNullOrEmpty())
-            {
-                sql += @" and e.IsActive = @IsActive";
-            }
-
-            if (!options.Department.IsNullOrEmpty())
-            {
-                sql += @" and ed.Department = @Department";
-            }
-
-            if (!options.EmployeeId.IsNullOrEmpty())
-            {
-                sql += @" and e.EmployeeId = @EmployeeId";
-            }
-
-            if (!options.EmployeeName.IsNullOrEmpty())
-            {
-                sql += @" and ed.EmployeeName like @EmployeeName";
-            }
-
             try
             {
-                int total = await DataBase.QueryFirstAsync<int>(sql,
-                        new
-                        {
-                            IsActive = options.IsActive,
-                            Department = options.Department,
-                            EmployeeId = options.EmployeeId,
-                            EmployeeName = $"%{options.EmployeeName}%",
-                            Page = options.currentPage,
-                        });
-                int totalPage = (int)Math.Ceiling(total / 10.0);
-                return totalPage;
+                int total = await ApplyAccountFilters(DbContext.Employees.AsNoTracking(), options)
+                    .Join(DbContext.EmployeeDetails.AsNoTracking(),
+                        employee => employee.EmployeeId,
+                        detail => detail.EmployeeId,
+                        (employee, detail) => employee.EmployeeId)
+                    .CountAsync();
+
+                return GetTotalPages(total);
             }
             catch(Exception ex)
             {
-                throw new Exception("總頁數取得失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to get profile account total pages");
+                throw;
             }
         }
 
@@ -243,36 +180,48 @@ namespace Heldom_SYS.Service
 
         public async Task<string> GetNewId()
         {
-            string sql = "SELECT TOP 1 EmployeeID FROM Employee WHERE EmployeeID like 'E%' ORDER BY EmployeeID DESC";
             try
             {
-                string NewId = await DataBase.QueryFirstAsync<string>(sql);
-                int NewIdNum = int.Parse(NewId.Substring(1));
-                NewIdNum = NewIdNum + 1;
-                NewId = "E" + NewIdNum.ToString().PadLeft(5, '0');
-                return NewId;
+                string? latestEmployeeId = await DbContext.Employees
+                    .AsNoTracking()
+                    .Where(employee => employee.EmployeeId.StartsWith("E"))
+                    .OrderByDescending(employee => employee.EmployeeId)
+                    .Select(employee => employee.EmployeeId)
+                    .FirstOrDefaultAsync();
+
+                return GenerateNextPrefixedId(latestEmployeeId, "E", 5);
             }
             catch(Exception ex)
             {
-                throw new Exception("Id 取得失敗: "+ ex.Message);
+                Logger.LogError(ex, "Failed to get next employee id");
+                throw;
             }
         }
+
         public async Task<IEnumerable<ProfileNewAccountData>> GetSupervisor()
         {
-            string sql = "SELECT e.EmployeeID, ed.EmployeeName " +
-                "FROM Employee e JOIN EmployeeDetail ed ON e.EmployeeID = ed.EmployeeID " +
-                "WHERE e.PositionRole = 'M' OR e.PositionRole = 'A'";
             try
             {
-                IEnumerable<ProfileNewAccountData> ISupervisor = await DataBase.QueryAsync<ProfileNewAccountData>(sql);
-
-                return ISupervisor;
+                return await DbContext.Employees
+                    .AsNoTracking()
+                    .Where(employee => employee.PositionRole == "M" || employee.PositionRole == "A")
+                    .Join(DbContext.EmployeeDetails.AsNoTracking(),
+                        employee => employee.EmployeeId,
+                        detail => detail.EmployeeId,
+                        (employee, detail) => new ProfileNewAccountData
+                        {
+                            EmployeeId = employee.EmployeeId,
+                            EmployeeName = detail.EmployeeName
+                        })
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                throw new Exception("Id 取得失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to get supervisors");
+                throw;
             }
         }
+
         // 新增員工個人帳號資料
         public async Task<string> CreateAccount(GetNewAccountEditData userInput)
         {
@@ -305,7 +254,7 @@ namespace Heldom_SYS.Service
                     .FirstOrDefaultAsync();
 
                 string employeeId = GenerateNextPrefixedId(latestEmployeeId, "E", 5);
-                
+
                 var employee = new Employee
                 {
                     EmployeeId = employeeId,
@@ -324,47 +273,38 @@ namespace Heldom_SYS.Service
                     return "Employee表格建立失敗！";
                 }
 
-                try
+                byte[] photo = Convert.FromBase64String(userInput.EmployeePhoto);
+
+                var employeeDetail = new EmployeeDetail
                 {
-                    byte[] photo = Convert.FromBase64String(userInput.EmployeePhoto);
+                    EmployeeId = employeeId,
+                    Department = userInput.Department,
+                    ImmediateSupervisor = userInput.ImmediateSupervisor == "總經理" ? null: userInput.ImmediateSupervisor,
+                    EmployeePhoto = photo,
+                    EmployeeName = userInput.EmployeeName,
+                    PhoneNumber = userInput.PhoneNumber,
+                    Mail = userInput.Mail,
+                    Password = userInput.Password,
+                    Address = userInput.Address,
+                    Gender = userInput.Gender,
+                    BirthDate = userInput.BirthDate,
+                    EmergencyContact = userInput.EmergencyContact,
+                    EmergencyRelationship = userInput.EmergencyRelationship,
+                    EmergencyContactPhone = userInput.EmergencyContactPhone,
+                    AnnualLeave = (byte)userInput.AnnualLeave
+                };
 
-                    var employeeDetail = new EmployeeDetail
-                    {
-                        EmployeeId = employeeId,
-                        Department = userInput.Department,
-                        ImmediateSupervisor = (userInput.ImmediateSupervisor == "總經理" ? null: userInput.ImmediateSupervisor),
-                        EmployeePhoto = photo,
-                        EmployeeName = userInput.EmployeeName,
-                        PhoneNumber = userInput.PhoneNumber,
-                        Mail = userInput.Mail,
-                        Password = userInput.Password,
-                        Address = userInput.Address,
-                        Gender = userInput.Gender,
-                        BirthDate = userInput.BirthDate,
-                        EmergencyContact = userInput.EmergencyContact,
-                        EmergencyRelationship = userInput.EmergencyRelationship,
-                        EmergencyContactPhone = userInput.EmergencyContactPhone,
-                        AnnualLeave = (byte)userInput.AnnualLeave
-                    };
-
-                    DbContext.EmployeeDetails.Add(employeeDetail);
-                    affectedRows = await DbContext.SaveChangesAsync();
-                    if (affectedRows == 0)
-                    {
-                        await transaction.RollbackAsync();
-                        return "EmployeeDetail表格建立失敗！";
-                    }
-
-                    await transaction.CommitAsync();
-                    return "員工檔案建立成功！";
-                }
-                catch (Exception ex)
+                DbContext.EmployeeDetails.Add(employeeDetail);
+                affectedRows = await DbContext.SaveChangesAsync();
+                if (affectedRows == 0)
                 {
-                    Logger.LogError(ex, "Failed to create employee detail for generated employee {EmployeeId}", employeeId);
-                    throw;
+                    await transaction.RollbackAsync();
+                    return "EmployeeDetail表格建立失敗！";
                 }
+
+                await transaction.CommitAsync();
+                return "員工檔案建立成功！";
             }
-
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
@@ -373,174 +313,173 @@ namespace Heldom_SYS.Service
             }
         }
 
-            // 更新員工個人帳號資料 的 GET & UPDATE
+        // 更新員工個人帳號資料 的 GET & UPDATE
         public async Task<IEnumerable<GetNewAccountEditData>> GetAccountData(string employeeId)
         {
             try
             {
-                string userID = employeeId;
-
-                var employeesWithDetail = await DbContext.Employees
-                    .Where(employee => employee.EmployeeId == userID)
-                    .Join(DbContext.EmployeeDetails,
-                    employee => employee.EmployeeId,
-                    detail => detail.EmployeeId,
-                    (employee, detail) => new GetNewAccountEditData
-                    {
-                        EmployeePhoto = Convert.ToBase64String(detail.EmployeePhoto),
-                        EmployeeName = detail.EmployeeName,
-                        Gender = detail.Gender,
-                        BirthDate = detail.BirthDate,
-                        PhoneNumber = detail.PhoneNumber,
-                        EmergencyContact = detail.EmergencyContact,
-                        EmergencyRelationship = detail.EmergencyRelationship,
-                        EmergencyContactPhone = detail.EmergencyContactPhone,
-                        HireDate = employee.HireDate,
-                        IsActive = employee.IsActive,
-                        EmployeeId = employee.EmployeeId,
-                        PositionRole = employee.PositionRole,
-                        Department = detail.Department,
-                        Position = employee.Position,
-                        ImmediateSupervisor = detail.ImmediateSupervisor,
-                        Address = detail.Address,
-                        Mail = detail.Mail,
-                        Password = detail.Password,
-                        ResignationDate = employee.ResignationDate
-                    }).ToListAsync();
-                return employeesWithDetail;
+                return await DbContext.Employees
+                    .AsNoTracking()
+                    .Where(employee => employee.EmployeeId == employeeId)
+                    .Join(DbContext.EmployeeDetails.AsNoTracking(),
+                        employee => employee.EmployeeId,
+                        detail => detail.EmployeeId,
+                        (employee, detail) => new GetNewAccountEditData
+                        {
+                            EmployeePhoto = Convert.ToBase64String(detail.EmployeePhoto),
+                            EmployeeName = detail.EmployeeName,
+                            Gender = detail.Gender,
+                            BirthDate = detail.BirthDate,
+                            PhoneNumber = detail.PhoneNumber,
+                            EmergencyContact = detail.EmergencyContact,
+                            EmergencyRelationship = detail.EmergencyRelationship,
+                            EmergencyContactPhone = detail.EmergencyContactPhone,
+                            HireDate = employee.HireDate,
+                            IsActive = employee.IsActive,
+                            EmployeeId = employee.EmployeeId,
+                            PositionRole = employee.PositionRole,
+                            Department = detail.Department,
+                            Position = employee.Position,
+                            ImmediateSupervisor = detail.ImmediateSupervisor,
+                            Address = detail.Address,
+                            Mail = detail.Mail,
+                            Password = detail.Password,
+                            ResignationDate = employee.ResignationDate
+                        })
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                throw new Exception("資料取得失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to get employee account {EmployeeId}", employeeId);
+                throw;
             }
         }
 
         public async Task<string> UpdateAccount(GetNewAccountEditData userInput)
         {
-            await EnsureConnectionOpenAsync();
-            using var transaction = DataBase.BeginTransaction(IsolationLevel.Serializable);
+            await using var transaction = await DbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {
-                string sql = "UPDATE Employee SET [IsActive] = @IsActive," +
-                    "[Position] = @Position," +
-                    "[PositionRole] = @PositionRole," +
-                    "[HireDate] = @HireDate," +
-                    "[ResignationDate] = @ResignationDate " +
-                    "WHERE EmployeeID = @EmployeeID";
+                bool phoneExists = await DbContext.EmployeeDetails
+                    .AnyAsync(detail => detail.PhoneNumber == userInput.PhoneNumber && detail.EmployeeId != userInput.EmployeeId);
 
-                string sql2 = "UPDATE EmployeeDetail SET [Department] = @Department," +
-                    "[ImmediateSupervisor] = @ImmediateSupervisor," +
-                    "[EmployeePhoto] = @EmployeePhoto," +
-                    "[EmployeeName] = @EmployeeName," +
-                    "[PhoneNumber] = @PhoneNumber," +
-                    "[Mail] = @Mail," +
-                    "[Password] = @Password," +
-                    "[Address] = @Address," +
-                    "[Gender] = @Gender," +
-                    "[BirthDate] = @BirthDate," +
-                    "[EmergencyContact] = @EmergencyContact," +
-                    "[EmergencyRelationship] = @EmergencyRelationship," +
-                    "[EmergencyContactPhone] = @EmergencyContactPhone," +
-                    "[AnnualLeave] = @AnnualLeave " +
-                    "WHERE EmployeeID = @EmployeeID";
+                bool mailExists = await DbContext.EmployeeDetails
+                    .AnyAsync(detail => detail.Mail == userInput.Mail && detail.EmployeeId != userInput.EmployeeId);
 
-                string sqlCheck = "SELECT COUNT([PhoneNumber]) FROM EmployeeDetail WHERE PhoneNumber = @PhoneNumber and EmployeeID NOT IN (@EmployeeID)";
-                string sqlCheck2 = "SELECT COUNT([Mail]) FROM EmployeeDetail WHERE Mail = @Mail and EmployeeID NOT IN (@EmployeeID)";
-
-                try
+                if (phoneExists)
                 {
-                    int checkResult = await DataBase.QueryFirstAsync<int>(sqlCheck,
-                        new
-                        {
-                            PhoneNumber = userInput.PhoneNumber,
-                            EmployeeID = userInput.EmployeeId
-                        }, transaction);
-
-                    int checkResult2 = await DataBase.QueryFirstAsync<int>(sqlCheck2,
-                        new
-                        {
-                            Mail = userInput.Mail,
-                            EmployeeID = userInput.EmployeeId
-                        }, transaction);
-
-                    if (checkResult != 0)
-                    {
-                        transaction.Rollback();
-                        return "電話號碼已存在!";
-                    }
-                    else if (checkResult2 != 0)
-                    {
-                        transaction.Rollback();
-                        return "電子信箱已存在！";
-                    }
-
-                    var rowsAffected = await DataBase.ExecuteAsync(sql,
-                        new
-                        {
-                            IsActive = userInput.IsActive,
-                            Position = userInput.Position,
-                            PositionRole = userInput.PositionRole,
-                            HireDate = userInput.HireDate,
-                            ResignationDate = userInput.ResignationDate,
-                            EmployeeID = userInput.EmployeeId
-                        }, transaction);
-
-                    if (rowsAffected == 0)
-                    {
-                        transaction.Rollback();
-                        return "Employee表格更新失敗！";
-                    }
-
-                    rowsAffected = await DataBase.ExecuteAsync(sql2,
-                        new
-                        {
-                            Department = userInput.Department,
-                            ImmediateSupervisor = userInput.ImmediateSupervisor,
-                            EmployeePhoto = Convert.FromBase64String(userInput.EmployeePhoto),
-                            EmployeeName = userInput.EmployeeName,
-                            PhoneNumber = userInput.PhoneNumber,
-                            Mail = userInput.Mail,
-                            Password = userInput.Password,
-                            Address = userInput.Address,
-                            Gender = userInput.Gender,
-                            BirthDate = userInput.BirthDate,
-                            EmergencyContact = userInput.EmergencyContact,
-                            EmergencyRelationship = userInput.EmergencyRelationship,
-                            EmergencyContactPhone = userInput.EmergencyContactPhone,
-                            AnnualLeave = userInput.AnnualLeave,
-                            EmployeeID = userInput.EmployeeId
-                        }, transaction);
-
-                    if (rowsAffected == 0)
-                    {
-                        transaction.Rollback();
-                        return "EmployeeDetail表格更新失敗！";
-                    }
-
-                    transaction.Commit();
-                    return "資料更新完畢！";
+                    await transaction.RollbackAsync();
+                    return "電話號碼已存在!";
                 }
-                catch (Exception ex)
+
+                if (mailExists)
                 {
-                    transaction.Rollback();
-                    Logger.LogError(ex, "Failed to update employee account {EmployeeId}", userInput.EmployeeId);
-                    throw;
+                    await transaction.RollbackAsync();
+                    return "電子信箱已存在！";
                 }
+
+                Employee? employee = await DbContext.Employees
+                    .FirstOrDefaultAsync(item => item.EmployeeId == userInput.EmployeeId);
+
+                if (employee == null)
+                {
+                    await transaction.RollbackAsync();
+                    return "Employee表格更新失敗！";
+                }
+
+                EmployeeDetail? detail = await DbContext.EmployeeDetails
+                    .FirstOrDefaultAsync(item => item.EmployeeId == userInput.EmployeeId);
+
+                if (detail == null)
+                {
+                    await transaction.RollbackAsync();
+                    return "EmployeeDetail表格更新失敗！";
+                }
+
+                employee.IsActive = userInput.IsActive;
+                employee.Position = userInput.Position;
+                employee.PositionRole = userInput.PositionRole;
+                employee.HireDate = userInput.HireDate;
+                employee.ResignationDate = userInput.ResignationDate;
+
+                detail.Department = userInput.Department;
+                detail.ImmediateSupervisor = userInput.ImmediateSupervisor;
+                detail.EmployeePhoto = Convert.FromBase64String(userInput.EmployeePhoto);
+                detail.EmployeeName = userInput.EmployeeName;
+                detail.PhoneNumber = userInput.PhoneNumber;
+                detail.Mail = userInput.Mail;
+                detail.Password = userInput.Password;
+                detail.Address = userInput.Address;
+                detail.Gender = userInput.Gender;
+                detail.BirthDate = userInput.BirthDate;
+                detail.EmergencyContact = userInput.EmergencyContact;
+                detail.EmergencyRelationship = userInput.EmergencyRelationship;
+                detail.EmergencyContactPhone = userInput.EmergencyContactPhone;
+                detail.AnnualLeave = (byte)userInput.AnnualLeave;
+
+                await DbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return "資料更新完畢！";
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 Logger.LogError(ex, "Failed to update employee account {EmployeeId}", userInput.EmployeeId);
                 throw;
             }
         }
 
-        private async Task EnsureConnectionOpenAsync()
+        private static IQueryable<Employee> ApplyAccountFilters(IQueryable<Employee> query, ProfileOptions options)
         {
-            if (DataBase.State != ConnectionState.Open)
+            if (!string.IsNullOrEmpty(options.IsActive) && TryParseBooleanFilter(options.IsActive, out bool isActive))
             {
-                await DataBase.OpenAsync();
+                query = query.Where(employee => employee.IsActive == isActive);
             }
+
+            if (!string.IsNullOrEmpty(options.Department))
+            {
+                query = query.Where(employee => employee.EmployeeDetail != null && employee.EmployeeDetail.Department == options.Department);
+            }
+
+            if (!string.IsNullOrEmpty(options.EmployeeId))
+            {
+                query = query.Where(employee => employee.EmployeeId == options.EmployeeId);
+            }
+
+            if (!string.IsNullOrEmpty(options.EmployeeName))
+            {
+                query = query.Where(employee => employee.EmployeeDetail != null && employee.EmployeeDetail.EmployeeName.Contains(options.EmployeeName));
+            }
+
+            return query;
+        }
+
+        private static int GetPage(string? page)
+        {
+            return int.TryParse(page, out int parsedPage) && parsedPage > 0 ? parsedPage : 1;
+        }
+
+        private static bool TryParseBooleanFilter(string value, out bool result)
+        {
+            if (value == "1")
+            {
+                result = true;
+                return true;
+            }
+
+            if (value == "0")
+            {
+                result = false;
+                return true;
+            }
+
+            return bool.TryParse(value, out result);
+        }
+
+        private static int GetTotalPages(int total)
+        {
+            return (int)Math.Ceiling(total / (double)PageSize);
         }
 
         private static string GenerateNextPrefixedId(string? latestId, string prefix, int digits)

@@ -64,99 +64,29 @@ namespace Heldom_SYS.Service
 
         public async Task<IEnumerable<AccidentRes>> GetTrack(AccidentReq req)
         {
-            // 需加入日期比對和人名join判斷
-            string sql = @"SELECT Accident.*,EmployeeDetail.EmployeeName FROM Accident
+            string sql = ApplyTrackFilters(@"SELECT Accident.*,EmployeeDetail.EmployeeName FROM Accident
                     left join EmployeeDetail on Accident.EmployeeID = EmployeeDetail.EmployeeID
-                    where 1 = 1
-                    ";
-
-            if (UserRoleStore.GetRole() != "A") {
-                sql += @" and IncidentControllerID = @IncidentControllerID";
-            }
-
-            if (!string.IsNullOrEmpty(req.Title)) {
-                sql += @" and AccidentTitle like @AccidentTitle";
-            }
-            
-            if (!string.IsNullOrEmpty(req.Type) && req.Type != "全部")
-            {
-                sql += @" and AccidentType = @AccidentType";
-            }
-
-            if (!string.IsNullOrEmpty(req.Name))
-            {
-                sql += @" and EmployeeName like @EmployeeName";
-            }
-
-            if (!string.IsNullOrEmpty(req.Date))
-            {
-                sql += @" and((StartTime < @Date AND EndTime >= @Date) OR StartTime < @Date)";
-            }
-            
+                    where 1 = 1", req);
 
             sql += @" ORDER BY AccidentID DESC
                     OFFSET( @Page - 1) * 10 ROWS
                     FETCH NEXT 10 ROWS ONLY";
 
-            IEnumerable<AccidentRes>? data = await DataBase.QueryAsync<AccidentRes>(sql,
-                new
-                {
-                    IncidentControllerID = UserRoleStore.UserID,
-                    Page = req.Page,
-                    AccidentTitle = $"%{req.Title}%",
-                    AccidentType = req.Type,
-                    EmployeeName = $"%{req.Name}%",
-                    Date = req.Date,
-                });
+            DynamicParameters parameters = CreateTrackParameters(req);
+            parameters.Add("Page", GetPage(req.Page));
 
-            return data;
+            return await DataBase.QueryAsync<AccidentRes>(sql, parameters);
         }
 
         public async Task<int> GetTrackPage(AccidentReq req)
         {
-            string sql = @"SELECT count(*) as Total FROM Accident
+            string sql = ApplyTrackFilters(@"SELECT count(*) as Total FROM Accident
                         left join EmployeeDetail on Accident.EmployeeID = EmployeeDetail.EmployeeID
-                        where 1 = 1";
+                        where 1 = 1", req);
 
-            if (UserRoleStore.GetRole() != "A")
-            {
-                sql += @" and IncidentControllerID = @IncidentControllerID";
-            }
-
-            if (!string.IsNullOrEmpty(req.Title))
-            {
-                sql += @" and AccidentTitle like @AccidentTitle";
-            }
-
-            if (!string.IsNullOrEmpty(req.Type) && req.Type != "全部")
-            {
-                sql += @" and AccidentType like @AccidentType";
-            }
-
-            if (!string.IsNullOrEmpty(req.Name))
-            {
-                sql += @" and EmployeeName like @EmployeeName";
-            }
-
-            if (!string.IsNullOrEmpty(req.Date))
-            {
-                sql += @" and((StartTime < @Date AND EndTime >= @Date) OR StartTime < @Date)";
-            }
-
-            int total = await DataBase.QuerySingleAsync<int>(sql,
-                new
-                {
-                    IncidentControllerID = UserRoleStore.UserID,
-                    AccidentTitle = $"%{req.Title}%",
-                    AccidentType = req.Type,
-                    EmployeeName = $"%{req.Name}%",
-                    Date = req.Date,
-                });
-
+            int total = await DataBase.QuerySingleAsync<int>(sql, CreateTrackParameters(req));
             return GetTotalPages(total);
         }
-
-
         public async Task<Accident> GetDetail(string id)
         {
             string sql = @"SELECT * FROM Accident where AccidentID = @AccidentID";
@@ -387,6 +317,51 @@ namespace Heldom_SYS.Service
             }
         }
 
+        private string ApplyTrackFilters(string sql, AccidentReq req)
+        {
+            if (UserRoleStore.GetRole() != "A")
+            {
+                sql += @" and IncidentControllerID = @IncidentControllerID";
+            }
+
+            if (!string.IsNullOrEmpty(req.Title))
+            {
+                sql += @" and AccidentTitle like @AccidentTitle";
+            }
+
+            if (!string.IsNullOrEmpty(req.Type) && req.Type != "全部")
+            {
+                sql += @" and AccidentType = @AccidentType";
+            }
+
+            if (!string.IsNullOrEmpty(req.Name))
+            {
+                sql += @" and EmployeeName like @EmployeeName";
+            }
+
+            if (!string.IsNullOrEmpty(req.Date))
+            {
+                sql += @" and((StartTime < @Date AND EndTime >= @Date) OR StartTime < @Date)";
+            }
+
+            return sql;
+        }
+
+        private DynamicParameters CreateTrackParameters(AccidentReq req)
+        {
+            var parameters = new DynamicParameters();
+            parameters.Add("IncidentControllerID", UserRoleStore.UserID);
+            parameters.Add("AccidentTitle", $"%{req.Title}%");
+            parameters.Add("AccidentType", req.Type);
+            parameters.Add("EmployeeName", $"%{req.Name}%");
+            parameters.Add("Date", req.Date);
+            return parameters;
+        }
+
+        private static int GetPage(string? page)
+        {
+            return int.TryParse(page, out int parsedPage) && parsedPage > 0 ? parsedPage : 1;
+        }
         private static int GetTotalPages(int total)
         {
             return (int)Math.Ceiling(total / (double)PageSize);

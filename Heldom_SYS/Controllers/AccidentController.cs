@@ -1,22 +1,8 @@
-ï»¿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using Dapper;
 using Heldom_SYS.Interface;
-using Heldom_SYS.Models;
 using Heldom_SYS.CustomModel;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using NPOI.HSSF.Record;
-using NPOI.SS.Formula.Functions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using static NPOI.HSSF.Util.HSSFColor;
-using System.Collections.Generic;
 using System.Dynamic;
-using Org.BouncyCastle.Ocsp;
-using Org.BouncyCastle.Asn1.Ocsp;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Heldom_SYS.Controllers
 {
@@ -36,10 +22,10 @@ namespace Heldom_SYS.Controllers
         public async Task<IActionResult> GetReport([FromBody] AccidentReq data)
         {
             dynamic response = new ExpandoObject();
-            response.data = "æœªå‹•ä½œ";
+            response.data = "¥¼°Ê§@";
 
-            if (data.Page.IsNullOrEmpty()) {
-                response.data = "å¿…é ˆæŒ‡å®šé æ•¸";
+            if (string.IsNullOrEmpty(data.Page)) {
+                response.data = "¥²¶·«ü©w­¶¼Æ";
                 string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                 return Content(errorResponse, "application/json");
             }
@@ -52,7 +38,7 @@ namespace Heldom_SYS.Controllers
             catch (Exception error)
             {
                 Logger.LogError(error, "Failed to get accident report");
-                response.data = "æ‹¿å–å¤±æ•—";
+                response.data = "®³¨ú¥¢±Ñ";
             }
 
             string jsonResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
@@ -64,11 +50,11 @@ namespace Heldom_SYS.Controllers
         public async Task<IActionResult> GetTrack([FromBody] AccidentReq data)
         {
             dynamic response = new ExpandoObject();
-            response.data = "æœªå‹•ä½œ";
+            response.data = "¥¼°Ê§@";
 
-            if (data.Page.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(data.Page))
             {
-                response.data = "å¿…é ˆæŒ‡å®šé æ•¸";
+                response.data = "¥²¶·«ü©w­¶¼Æ";
                 string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                 return Content(errorResponse, "application/json");
             }
@@ -81,7 +67,7 @@ namespace Heldom_SYS.Controllers
             catch (Exception error)
             {
                 Logger.LogError(error, "Failed to get accident tracking data");
-                response.data = "æ‹¿å–å¤±æ•—";
+                response.data = "®³¨ú¥¢±Ñ";
             }
 
 
@@ -94,11 +80,11 @@ namespace Heldom_SYS.Controllers
         public async Task<IActionResult> GetDetail([FromBody] AccidentDetailReq data)
         {
             dynamic response = new ExpandoObject();
-            response.data = "æœªå‹•ä½œ";
+            response.data = "¥¼°Ê§@";
 
-            if (data.ID.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(data.ID))
             {
-                response.data = "æœªè¨­å®šID";
+                response.data = "¥¼³]©wID";
                 string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                 return Content(errorResponse, "application/json");
             }
@@ -112,7 +98,7 @@ namespace Heldom_SYS.Controllers
             catch (Exception error)
             {
                 Logger.LogError(error, "Failed to get accident detail {AccidentId}", data.ID);
-                response.data = "æ‹¿å–å¤±æ•—";
+                response.data = "®³¨ú¥¢±Ñ";
             }
 
             string jsonResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
@@ -123,7 +109,7 @@ namespace Heldom_SYS.Controllers
         public async Task<IActionResult> AddAccident([FromForm] string AccidentType, [FromForm] string AccidentTitle, [FromForm] string Description, [FromForm] string StartTime, [FromForm] string Id, [FromForm] List<string> Files)
         {
             dynamic response = new ExpandoObject();
-            response.data = "æœªå‹•ä½œ";
+            response.data = "¥¼°Ê§@";
 
             int maxSize = 5 * 1024 * 1024;
 
@@ -131,15 +117,15 @@ namespace Heldom_SYS.Controllers
             {
                 if (Files[i].Length > maxSize)
                 {
-                    response.data = "æª”æ¡ˆå¤§æ–¼5M";
+                    response.data = "ÀÉ®×¤j©ó5M";
                     string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                     return Content(errorResponse, "application/json");
                 }
             }
 
-            if (AccidentType.IsNullOrEmpty() || AccidentTitle.IsNullOrEmpty() || Description.IsNullOrEmpty() || StartTime.IsNullOrEmpty() || Id.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(AccidentType) || string.IsNullOrEmpty(AccidentTitle) || string.IsNullOrEmpty(Description) || string.IsNullOrEmpty(StartTime) || string.IsNullOrEmpty(Id))
             {
-                response.data = "æœªè¨­å®š AccidentType | AccidentTitle | Description | StartTime | Id";
+                response.data = "¥¼³]©w AccidentType | AccidentTitle | Description | StartTime | Id";
                 string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                 return Content(errorResponse, "application/json");
             }
@@ -147,12 +133,12 @@ namespace Heldom_SYS.Controllers
             try
             {
                 await AccidentService.AddAccident(AccidentType,AccidentTitle,Description,StartTime,Id,Files);
-                response.data = "æ–°å¢æˆåŠŸ";
+                response.data = "·s¼W¦¨¥\";
             }
             catch (Exception error)
             {
                 Logger.LogError(error, "Failed to add accident");
-                response.data = "æ–°å¢å¤±æ•—";
+                response.data = "·s¼W¥¢±Ñ";
             }
 
 
@@ -165,21 +151,21 @@ namespace Heldom_SYS.Controllers
         {
 
             dynamic response = new ExpandoObject();
-            response.data = "æœªå‹•ä½œ";
+            response.data = "¥¼°Ê§@";
 
             int maxSize = 5 * 1024 * 1024;
 
             for (int i = 0; i < Files.Count; i++) {
                 if (Files[i].Length > maxSize) {
-                    response.data = "æª”æ¡ˆå¤§æ–¼5M";
+                    response.data = "ÀÉ®×¤j©ó5M";
                     string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                     return Content(errorResponse, "application/json");
                 }
             }
 
-            if (Reply.IsNullOrEmpty() || AccidentId.IsNullOrEmpty() || Status.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(Reply) || string.IsNullOrEmpty(AccidentId) || string.IsNullOrEmpty(Status))
             {
-                response.data = "æœªè¨­å®š Reply | AccidentId | Status";
+                response.data = "¥¼³]©w Reply | AccidentId | Status";
                 string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                 return Content(errorResponse, "application/json");
             }
@@ -187,13 +173,13 @@ namespace Heldom_SYS.Controllers
             try
             {
                 await AccidentService.AddReply(Reply,AccidentId, Status, EndTime, Files);
-                response.data = "ä¿®æ”¹æˆåŠŸ";
+                response.data = "­×§ï¦¨¥\";
 
             }
             catch (Exception error)
             {
                 Logger.LogError(error, "Failed to add accident reply {AccidentId}", AccidentId);
-                response.data = "ä¿®æ”¹å¤±æ•—";
+                response.data = "­×§ï¥¢±Ñ";
 
             }
 
@@ -208,11 +194,11 @@ namespace Heldom_SYS.Controllers
         {
 
             dynamic response = new ExpandoObject();
-            response.data = "æœªå‹•ä½œ";
+            response.data = "¥¼°Ê§@";
 
-            if (data.ID.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(data.ID))
             {
-                response.data = "æœªè¨­å®šID";
+                response.data = "¥¼³]©wID";
                 string errorResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
                 return Content(errorResponse, "application/json");
             }
@@ -224,7 +210,7 @@ namespace Heldom_SYS.Controllers
             catch (Exception error)
             {
                 Logger.LogError(error, "Failed to delete accident {AccidentId}", data.ID);
-                response.data = "æ‹¿å–å¤±æ•—";
+                response.data = "®³¨ú¥¢±Ñ";
             }
 
             string jsonResponse = JsonConvert.SerializeObject(response, Formatting.Indented);

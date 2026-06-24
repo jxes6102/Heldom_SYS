@@ -9,7 +9,6 @@ using Heldom_SYS.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 
 
@@ -82,7 +81,7 @@ namespace Heldom_SYS.Controllers
             //}
 
 
-            if (type.IsNullOrEmpty() || id.IsNullOrEmpty() || motion.IsNullOrEmpty()) {
+            if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(id) || string.IsNullOrEmpty(motion)) {
                 return View("Issues");
             }
             else
@@ -361,6 +360,7 @@ namespace Heldom_SYS.Controllers
 
                 // --------------查BlueprintID--------------
                 var latestBlueprint = await db.Blueprints
+                    .AsNoTracking()
                     .OrderByDescending(b => b.BlueprintId) // 假設有 Version 欄位
                     .FirstOrDefaultAsync();
                 string BlueprintID = GenerateNextPrefixedId(latestBlueprint?.BlueprintId, "B", 4);

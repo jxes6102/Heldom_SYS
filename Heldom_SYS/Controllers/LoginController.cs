@@ -1,18 +1,10 @@
 using Dapper;
 using Heldom_SYS.Interface;
 using Heldom_SYS.Models;
-using MathNet.Numerics;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using NPOI.HSSF.Record;
-using NPOI.SS.Formula.Functions;
-using System.Reflection;
 using System;
-using Heldom_SYS.CustomModel;
 using System.Data;
 
 namespace Heldom_SYS.Controllers
@@ -156,7 +148,7 @@ namespace Heldom_SYS.Controllers
                 }
             }
  
-            if (!UserRoleStore.UserID.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(UserRoleStore.UserID))
             {
                 string roleSql = @"SELECT * FROM Employee where EmployeeID = @EmployeeID";
                 Employee? role = await DataBase.QueryFirstOrDefaultAsync<Employee>(roleSql,

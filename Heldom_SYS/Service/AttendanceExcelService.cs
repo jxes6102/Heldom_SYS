@@ -1,11 +1,6 @@
-ï»¿using Heldom_SYS.CustomModel;
 using Heldom_SYS.Interface;
 using Heldom_SYS.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using NPOI.HSSF.Record;
-using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
@@ -13,12 +8,10 @@ namespace Heldom_SYS.Service
 {
     public class AttendanceExcelService : IAttendanceExcelService
     {
-        private readonly SqlConnection DataBase;
         private readonly ConstructionDbContext _context;
 
-        public AttendanceExcelService(SqlConnection connection, ConstructionDbContext context)
+        public AttendanceExcelService(ConstructionDbContext context)
         {
-            DataBase = connection;
             _context = context;
         }
 
@@ -28,7 +21,7 @@ namespace Heldom_SYS.Service
             var query = _context.AttendanceRecords
                 .AsNoTracking()
                 .Include(ar => ar.Employee)
-                .ThenInclude(e => e.Temporarier) // è‡¨æ™‚å“¡å·¥è³‡æ–™
+                .ThenInclude(e => e.Temporarier) // Á{®É­û¤u¸ê®Æ
                 .ThenInclude(ir => ir!.Company)
                 .AsQueryable();
 
@@ -48,7 +41,7 @@ namespace Heldom_SYS.Service
             }
 
             var records = await query.Where((item)=> item.EmployeeId.Contains("P"))
-                .OrderByDescending(ar => ar.CheckOutTime == null) // æœªç°½é€€å„ªå…ˆ
+                .OrderByDescending(ar => ar.CheckOutTime == null) // ¥¼Ã±°hÀu¥ı
                 .ThenBy(ar => ar.Employee.Temporarier != null ? ar.Employee.Temporarier.Company.CompanyId : "0")
                 .Select(ar => new
                 {
@@ -60,11 +53,11 @@ namespace Heldom_SYS.Service
                             ? ar.Employee.EmployeeDetail.EmployeeName
                             : (ar.Employee.Temporarier != null
                                 ? ar.Employee.Temporarier.EmployeeName
-                                : "æœªçŸ¥"))
-                        : "æœªçŸ¥",
+                                : "¥¼ª¾"))
+                        : "¥¼ª¾",
                     employeeId = ar.EmployeeId,
                     startTime = ar.CheckInTime.ToString("HH:mm"),
-                    endTime = ar.CheckOutTime.HasValue ? ar.CheckOutTime.Value.ToString("HH:mm") : "æœªç°½é€€",
+                    endTime = ar.CheckOutTime.HasValue ? ar.CheckOutTime.Value.ToString("HH:mm") : "¥¼Ã±°h",
                     countTime = ar.CheckOutTime.HasValue ?
                                     ar.CheckOutTime.Value.Hour > 12 ? 
                                         ((ar.CheckOutTime.Value - ar.CheckInTime).TotalHours - 1).ToString("F1") 
@@ -78,21 +71,21 @@ namespace Heldom_SYS.Service
             //.Company.CompanyName
             var workbook = new XSSFWorkbook();
             var sheet = workbook.CreateSheet("Products");
-            // è¨­å®šç½®ä¸­æ¨£å¼
+            // ³]©w¸m¤¤¼Ë¦¡
             ICellStyle centeredStyle = workbook.CreateCellStyle();
-            centeredStyle.Alignment = HorizontalAlignment.Center;  // æ°´å¹³ç½®ä¸­
-            centeredStyle.VerticalAlignment = VerticalAlignment.Center;  // å‚ç›´ç½®ä¸­
+            centeredStyle.Alignment = HorizontalAlignment.Center;  // ¤ô¥­¸m¤¤
+            centeredStyle.VerticalAlignment = VerticalAlignment.Center;  // ««ª½¸m¤¤
 
 
             var headerRow = sheet.CreateRow(0);
-            headerRow.CreateCell(0).SetCellValue("åºè™Ÿ");
-            headerRow.CreateCell(1).SetCellValue("æ‰“å¡æ—¥æœŸ");
-            headerRow.CreateCell(2).SetCellValue("å“¡å·¥å§“å");
-            headerRow.CreateCell(3).SetCellValue("å“¡å·¥ç·¨è™Ÿ");
-            headerRow.CreateCell(4).SetCellValue("ä¸Šç­ç°½åˆ°");
-            headerRow.CreateCell(5).SetCellValue("ä¸‹ç­ç°½é€€");
-            headerRow.CreateCell(6).SetCellValue("ç¸½æ™‚æ•¸");
-            headerRow.CreateCell(7).SetCellValue("å» å•†");
+            headerRow.CreateCell(0).SetCellValue("§Ç¸¹");
+            headerRow.CreateCell(1).SetCellValue("¥´¥d¤é´Á");
+            headerRow.CreateCell(2).SetCellValue("­û¤u©m¦W");
+            headerRow.CreateCell(3).SetCellValue("­û¤u½s¸¹");
+            headerRow.CreateCell(4).SetCellValue("¤W¯ZÃ±¨ì");
+            headerRow.CreateCell(5).SetCellValue("¤U¯ZÃ±°h");
+            headerRow.CreateCell(6).SetCellValue("Á`®É¼Æ");
+            headerRow.CreateCell(7).SetCellValue("¼t°Ó");
 
             headerRow.GetCell(0).CellStyle = centeredStyle;
             headerRow.GetCell(1).CellStyle = centeredStyle;
@@ -125,7 +118,7 @@ namespace Heldom_SYS.Service
                 row.GetCell(7).CellStyle = centeredStyle;
             }
 
-            // **è¨­å®šæ‰€æœ‰æ¬„ä½è‡ªé©æ‡‰å¯¬åº¦**
+            // **³]©w©Ò¦³Äæ¦ì¦Û¾AÀ³¼e«×**
             for (int col = 0; col < 8; col++)
             {
                 sheet.SetColumnWidth(col, 20 * 256);
@@ -163,9 +156,9 @@ namespace Heldom_SYS.Service
             }
 
             var records = await query
-                .OrderBy(lr => lr.EmployeeId.StartsWith("E") ? 0 : 1) // æ­£å¼å“¡å·¥ (E) å„ªå…ˆ
-                .ThenBy(lr => lr.LeaveStatus) // æœªæ ¸å‡† (0) å„ªå…ˆ
-                .ThenByDescending(lr => lr.StartTime) // é–‹å§‹æ™‚é–“é™åº
+                .OrderBy(lr => lr.EmployeeId.StartsWith("E") ? 0 : 1) // ¥¿¦¡­û¤u (E) Àu¥ı
+                .ThenBy(lr => lr.LeaveStatus) // ¥¼®Ö­ã (0) Àu¥ı
+                .ThenByDescending(lr => lr.StartTime) // ¶}©l®É¶¡­°§Ç
                 .Where(lr => lr.Employee.EmployeeDetail != null)
                 .Select(lr => new
                 {
@@ -180,7 +173,7 @@ namespace Heldom_SYS.Service
                     endDate = lr.EndTime.ToString("yyyy/MM/dd"),
                     endTime = lr.EndTime.ToString("HH:mm"),
                     status = lr.LeaveStatus,
-                    leaveType = "ç‰¹ä¼‘",
+                    leaveType = "¯S¥ğ",
                     countTime = lr.SpentHours
                 })
                 .ToListAsync();
@@ -188,19 +181,19 @@ namespace Heldom_SYS.Service
 
             var workbook = new XSSFWorkbook();
             var sheet = workbook.CreateSheet("Products");
-            // è¨­å®šç½®ä¸­æ¨£å¼
+            // ³]©w¸m¤¤¼Ë¦¡
             ICellStyle centeredStyle = workbook.CreateCellStyle();
-            centeredStyle.Alignment = HorizontalAlignment.Center;  // æ°´å¹³ç½®ä¸­
-            centeredStyle.VerticalAlignment = VerticalAlignment.Center;  // å‚ç›´ç½®ä¸­
+            centeredStyle.Alignment = HorizontalAlignment.Center;  // ¤ô¥­¸m¤¤
+            centeredStyle.VerticalAlignment = VerticalAlignment.Center;  // ««ª½¸m¤¤
 
             var headerRow = sheet.CreateRow(0);
-            headerRow.CreateCell(0).SetCellValue("åºè™Ÿ");
-            headerRow.CreateCell(1).SetCellValue("å“¡å·¥å§“å");
-            headerRow.CreateCell(2).SetCellValue("é–‹å§‹æ™‚é–“");
-            headerRow.CreateCell(3).SetCellValue("çµæŸæ™‚é–“");
-            headerRow.CreateCell(4).SetCellValue("ç‹€æ…‹");
-            headerRow.CreateCell(5).SetCellValue("å‡åˆ¥");
-            headerRow.CreateCell(6).SetCellValue("ç¸½æ™‚æ•¸");
+            headerRow.CreateCell(0).SetCellValue("§Ç¸¹");
+            headerRow.CreateCell(1).SetCellValue("­û¤u©m¦W");
+            headerRow.CreateCell(2).SetCellValue("¶}©l®É¶¡");
+            headerRow.CreateCell(3).SetCellValue("µ²§ô®É¶¡");
+            headerRow.CreateCell(4).SetCellValue("ª¬ºA");
+            headerRow.CreateCell(5).SetCellValue("°²§O");
+            headerRow.CreateCell(6).SetCellValue("Á`®É¼Æ");
 
             headerRow.GetCell(0).CellStyle = centeredStyle;
             headerRow.GetCell(1).CellStyle = centeredStyle;
@@ -217,7 +210,7 @@ namespace Heldom_SYS.Service
                 row.CreateCell(1).SetCellValue(records[i].employeeName);
                 row.CreateCell(2).SetCellValue(records[i].startTime);
                 row.CreateCell(3).SetCellValue(records[i].endTime);
-                row.CreateCell(4).SetCellValue(records[i].status ? "å®Œæˆ" : "è™•ç†ä¸­");
+                row.CreateCell(4).SetCellValue(records[i].status ? "§¹¦¨" : "³B²z¤¤");
                 row.CreateCell(5).SetCellValue(records[i].leaveType);
                 row.CreateCell(6).SetCellValue(records[i].countTime);
 
@@ -230,7 +223,7 @@ namespace Heldom_SYS.Service
                 row.GetCell(6).CellStyle = centeredStyle;
             }
 
-            // **è¨­å®šæ‰€æœ‰æ¬„ä½è‡ªé©æ‡‰å¯¬åº¦**
+            // **³]©w©Ò¦³Äæ¦ì¦Û¾AÀ³¼e«×**
             for (int col = 0; col < 7; col++)
             {
                 sheet.SetColumnWidth(col, 15 * 256);

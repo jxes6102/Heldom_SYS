@@ -1,23 +1,19 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Heldom_SYS.Models;
-using Heldom_SYS.Service;
 using Heldom_SYS.Interface;
-using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using System.Dynamic;
-using static Heldom_SYS.Service.AccidentService;
 
 
 namespace Heldom_SYS.Controllers
 {
     public class DashboardController : Controller
     {
+        private const int PageSize = 10;
+
 
         //Dashboard
         public IActionResult Dashboard()
@@ -41,7 +37,7 @@ namespace Heldom_SYS.Controllers
         }
 
 
-        //ç¾å ´ä½œæ¥­äººå“¡
+        //²{³õ§@·~¤H­û
         public async Task<IActionResult> GetActiveWorkingCount()
         {
             string query = @"
@@ -57,7 +53,7 @@ namespace Heldom_SYS.Controllers
 
             return Json(new { count });
         }
-        //ç¾å ´ä½œæ¥­äººå“¡ popup è¡¨æ ¼
+        //²{³õ§@·~¤H­û popup ªí®æ
         public async Task<IActionResult> GetActiveWorkers(int page = 1)
         {
             string query = @"
@@ -104,12 +100,8 @@ namespace Heldom_SYS.Controllers
                     );";
 
 
-            IEnumerable<PageData>? data = await DataBase.QueryAsync<PageData>(countSql);
-
-            var result = data.Select(x => x.Total).ToList().First();
-            int count = int.Parse(result);
-
-            response.pageCount = count;
+            int count = await DataBase.QuerySingleAsync<int>(countSql);
+            response.pageCount = GetTotalPages(count);
 
             string jsonResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
             return Content(jsonResponse, "application/json");
@@ -117,24 +109,24 @@ namespace Heldom_SYS.Controllers
         }
 
 
-        //äººå“¡ç‹€æ…‹
+        //¤H­ûª¬ºA
         public async Task<IActionResult> GetWorkerCounts()
         {
             string query = @"
-            -- çµ±è¨ˆå„å…¬å¸äººæ•¸
+            -- ²Î­p¦U¤½¥q¤H¼Æ
             SELECT 
                 t.CompanyID,
                 COUNT(DISTINCT e.EmployeeID) AS WorkerCount
             FROM Employee e
             JOIN AttendanceRecord ar ON e.EmployeeID = ar.EmployeeID
-            JOIN Temporarier t ON e.EmployeeID = t.EmployeeID  -- å–å¾— CompanyID
+            JOIN Temporarier t ON e.EmployeeID = t.EmployeeID  -- ¨ú±o CompanyID
             WHERE e.IsActive = 1
             AND ar.CheckInTime >= CAST(GETDATE() AS DATE)
             AND ar.CheckInTime < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))
             AND ar.CheckOutTime IS NULL
             GROUP BY t.CompanyID;
 
-            -- å…¶ä»–é¡åˆ¥ (PositionRole = 'e')
+            -- ¨ä¥LÃş§O (PositionRole = 'e')
             SELECT 
                 COUNT(DISTINCT e.EmployeeID) AS OthersCount
             FROM Employee e
@@ -144,7 +136,7 @@ namespace Heldom_SYS.Controllers
             AND ar.CheckInTime < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))
             AND ar.CheckOutTime IS NULL
             AND e.PositionRole IN ('e', 'm');"; 
-            // ["others"] çµ±è¨ˆ 'e' å’Œ 'm'
+            // ["others"] ²Î­p 'e' ©M 'm'
 
             using (var multi = await DataBase.QueryMultipleAsync(query))
             {
@@ -164,7 +156,7 @@ namespace Heldom_SYS.Controllers
             }
         }
 
-        //è‡¨æ™‚å·¥å…¥å ´å¾…æ ¸å¯
+        //Á{®É¤u¤J³õ«İ®Ö¥i
         public async Task<IActionResult> GetTempWorkerCount()
         {
             string query = @"
@@ -178,7 +170,7 @@ namespace Heldom_SYS.Controllers
             return Json(new { count });
         }
 
-        //è‡¨æ™‚å·¥å…¥å ´å¾…æ ¸å¯ pop-up
+        //Á{®É¤u¤J³õ«İ®Ö¥i pop-up
         public async Task<IActionResult> GetPendingTempWorkers()
         {
             string query = @"
@@ -197,13 +189,13 @@ namespace Heldom_SYS.Controllers
             var tempWorkers = await DataBase.QueryAsync(query);
             return Json(tempWorkers);
         }
-        // æ”¹è®Š IsActive ç‹€æ…‹ 0 => 1
+        // §ïÅÜ IsActive ª¬ºA 0 => 1
         [HttpPost]
         public async Task<IActionResult> ApproveTempWorkers([FromBody] List<string> employeeIds)
         {
             if (employeeIds == null || employeeIds.Count == 0)
             {
-                return BadRequest("æ²’æœ‰é¸æ“‡ä»»ä½•å“¡å·¥");
+                return BadRequest("¨S¦³¿ï¾Ü¥ô¦ó­û¤u");
             }
 
             string query = "UPDATE Employee SET IsActive = 1 WHERE EmployeeID IN @EmployeeIDs";
@@ -214,9 +206,9 @@ namespace Heldom_SYS.Controllers
         }
 
 
-        //æœªè™•ç†ç•°å¸¸
+        //¥¼³B²z²§±`
 
-        //å–å¾—ç•°å¸¸æ•¸é‡
+        //¨ú±o²§±`¼Æ¶q
         public async Task<IActionResult> GetIssueCounts()
         {
             string queryA = @"
@@ -238,9 +230,9 @@ namespace Heldom_SYS.Controllers
             //return Ok(new { A = totalIssues, M = managerIssues });
         }
 
-        //æœªè™•ç†ç•°å¸¸ Pop-up
+        //¥¼³B²z²§±` Pop-up
 
-        //è¡¨æ ¼
+        //ªí®æ
         public async Task<IActionResult> GetPendingIssues(int page = 1)
         {
             string query = @"
@@ -279,16 +271,13 @@ namespace Heldom_SYS.Controllers
                 countSql += @" and a.IncidentControllerID = @IncidentControllerID";
             }
 
-            IEnumerable<PageData>? data = await DataBase.QueryAsync<PageData>(countSql,
+            int count = await DataBase.QuerySingleAsync<int>(countSql,
                 new
                 {
                     IncidentControllerID = UserRoleStore.UserID
                 });
 
-            var result = data.Select(x => x.Total).ToList().First();
-            int count = int.Parse(result);
-
-            response.pageCount = count;
+            response.pageCount = GetTotalPages(count);
 
             string jsonResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
             return Content(jsonResponse, "application/json");
@@ -306,6 +295,11 @@ namespace Heldom_SYS.Controllers
         //{
         //    return View();
         //}
+
+        private static int GetTotalPages(int total)
+        {
+            return (int)Math.Ceiling(total / (double)PageSize);
+        }
 
     }
 }
