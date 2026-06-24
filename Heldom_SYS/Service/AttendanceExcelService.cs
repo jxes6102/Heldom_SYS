@@ -26,9 +26,10 @@ namespace Heldom_SYS.Service
         {
 
             var query = _context.AttendanceRecords
+                .AsNoTracking()
                 .Include(ar => ar.Employee)
                 .ThenInclude(e => e.Temporarier) // 臨時員工資料
-                .ThenInclude(ir => ir.Company)
+                .ThenInclude(ir => ir!.Company)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(employeeName))
@@ -48,7 +49,7 @@ namespace Heldom_SYS.Service
 
             var records = await query.Where((item)=> item.EmployeeId.Contains("P"))
                 .OrderByDescending(ar => ar.CheckOutTime == null) // 未簽退優先
-                .ThenBy(ar => (ar.Employee.Temporarier != null) ? ar.Employee.Temporarier.Company.CompanyId : "0")
+                .ThenBy(ar => ar.Employee.Temporarier != null ? ar.Employee.Temporarier.Company.CompanyId : "0")
                 .Select(ar => new
                 {
                     id = ar.AttendanceId,
@@ -143,13 +144,14 @@ namespace Heldom_SYS.Service
         {
 
             var query = _context.LeaveRecords
+                .AsNoTracking()
                 .Include(lr => lr.Employee)
                 .ThenInclude(e => e.EmployeeDetail)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(employeeName))
             {
-                query = query.Where(lr => lr.Employee.EmployeeDetail.EmployeeName.Contains(employeeName));
+                query = query.Where(lr => lr.Employee.EmployeeDetail != null && lr.Employee.EmployeeDetail.EmployeeName.Contains(employeeName));
             }
             if (startDate.HasValue)
             {
@@ -164,10 +166,11 @@ namespace Heldom_SYS.Service
                 .OrderBy(lr => lr.EmployeeId.StartsWith("E") ? 0 : 1) // 正式員工 (E) 優先
                 .ThenBy(lr => lr.LeaveStatus) // 未核准 (0) 優先
                 .ThenByDescending(lr => lr.StartTime) // 開始時間降序
+                .Where(lr => lr.Employee.EmployeeDetail != null)
                 .Select(lr => new
                 {
                     id = lr.EmployeeId + lr.StartTime.ToString("yyyyMMddHHmmss"),
-                    photo = lr.Employee.EmployeeDetail.EmployeePhoto != null
+                    photo = lr.Employee.EmployeeDetail!.EmployeePhoto != null
                         ? Convert.ToBase64String(lr.Employee.EmployeeDetail.EmployeePhoto)
                         : null,
                     employeeName = lr.Employee.EmployeeDetail.EmployeeName,

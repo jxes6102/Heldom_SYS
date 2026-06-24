@@ -181,7 +181,7 @@ namespace Heldom_SYS.Controllers
 
 
         // 生成下一个 AttendanceID
-        private string GenerateNextAttendanceId(string lastAttendanceId)
+        private string GenerateNextAttendanceId(string? lastAttendanceId)
         {
             if (string.IsNullOrEmpty(lastAttendanceId))
             {
@@ -387,13 +387,14 @@ namespace Heldom_SYS.Controllers
         public async Task<IActionResult> GetLeaveRecords(string employeeName, DateTime? startDate, DateTime? endDate)
         {
             var query = _context.LeaveRecords
+                .AsNoTracking()
                 .Include(lr => lr.Employee)
                 .ThenInclude(e => e.EmployeeDetail)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(employeeName))
             {
-                query = query.Where(lr => lr.Employee.EmployeeDetail.EmployeeName.Contains(employeeName));
+                query = query.Where(lr => lr.Employee.EmployeeDetail != null && lr.Employee.EmployeeDetail.EmployeeName.Contains(employeeName));
             }
             if (startDate.HasValue)
             {
@@ -409,10 +410,11 @@ namespace Heldom_SYS.Controllers
                 .ThenBy(lr => lr.LeaveStatus) // 未核准 (0) 優先
                 .ThenBy(lr => (startDate.HasValue || endDate.HasValue) ? lr.StartTime : (DateTime?)null) // 有日期時升序
                 .ThenByDescending(lr => (!startDate.HasValue && !endDate.HasValue) ? lr.StartTime : (DateTime?)null) // 無日期時降序
+                .Where(lr => lr.Employee.EmployeeDetail != null)
                 .Select(lr => new
                 {
                     id = lr.EmployeeId + lr.StartTime.ToString("yyyyMMddHHmmss"),
-                    photo = lr.Employee.EmployeeDetail.EmployeePhoto != null
+                    photo = lr.Employee.EmployeeDetail!.EmployeePhoto != null
                         ? Convert.ToBase64String(lr.Employee.EmployeeDetail.EmployeePhoto)
                         : null,
                     employeeName = lr.Employee.EmployeeDetail.EmployeeName,

@@ -3,19 +3,13 @@ using Heldom_SYS.Interface;
 using Heldom_SYS.Models;
 using Heldom_SYS.CustomModel;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
-using System.Data;
-using NPOI.SS.Formula.Functions;
-using MathNet.Numerics;
-using static NPOI.POIFS.Crypt.CryptoFunctions;
-using System.Collections.Generic;
-using Org.BouncyCastle.Ocsp;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace Heldom_SYS.Service
 {
     public class AccidentService: IAccidentService
     {
+        private const int PageSize = 10;
+
         private readonly SqlConnection DataBase;
         private readonly IUserStoreService UserRoleStore;
 
@@ -56,17 +50,13 @@ namespace Heldom_SYS.Service
             string sql = @"SELECT count(*) as Total FROM Accident
                         where EmployeeID = @EmployeeID";
 
-            IEnumerable<PageData>? data = await DataBase.QueryAsync<PageData>(sql,
+            int total = await DataBase.QuerySingleAsync<int>(sql,
                 new
                 {
                     EmployeeID = UserRoleStore.UserID,
                 });
 
-            var result = data.Select(x => x.Total).ToList().First();
-
-            int count = (int)Math.Ceiling(int.Parse(result) / 10.0);
-
-            return count;
+            return GetTotalPages(total);
         }
 
         public async Task<IEnumerable<AccidentRes>> GetTrack(AccidentReq req)
@@ -81,21 +71,21 @@ namespace Heldom_SYS.Service
                 sql += @" and IncidentControllerID = @IncidentControllerID";
             }
 
-            if (!req.Title.IsNullOrEmpty()) {
+            if (!string.IsNullOrEmpty(req.Title)) {
                 sql += @" and AccidentTitle like @AccidentTitle";
             }
             
-            if (!req.Type.IsNullOrEmpty() && !(req.Type == "全部"))
+            if (!string.IsNullOrEmpty(req.Type) && req.Type != "全部")
             {
                 sql += @" and AccidentType = @AccidentType";
             }
 
-            if (!req.Name.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(req.Name))
             {
                 sql += @" and EmployeeName like @EmployeeName";
             }
 
-            if (!req.Date.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(req.Date))
             {
                 sql += @" and((StartTime < @Date AND EndTime >= @Date) OR StartTime < @Date)";
             }
@@ -130,27 +120,27 @@ namespace Heldom_SYS.Service
                 sql += @" and IncidentControllerID = @IncidentControllerID";
             }
 
-            if (!req.Title.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(req.Title))
             {
                 sql += @" and AccidentTitle like @AccidentTitle";
             }
 
-            if (!req.Type.IsNullOrEmpty() && !(req.Type == "全部"))
+            if (!string.IsNullOrEmpty(req.Type) && req.Type != "全部")
             {
                 sql += @" and AccidentType like @AccidentType";
             }
 
-            if (!req.Name.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(req.Name))
             {
                 sql += @" and EmployeeName like @EmployeeName";
             }
 
-            if (!req.Date.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(req.Date))
             {
                 sql += @" and((StartTime < @Date AND EndTime >= @Date) OR StartTime < @Date)";
             }
 
-            IEnumerable<PageData>? data = await DataBase.QueryAsync<PageData>(sql,
+            int total = await DataBase.QuerySingleAsync<int>(sql,
                 new
                 {
                     IncidentControllerID = UserRoleStore.UserID,
@@ -160,11 +150,7 @@ namespace Heldom_SYS.Service
                     Date = req.Date,
                 });
 
-            var result = data.Select(x => x.Total).ToList().First();
-
-            int count = (int)Math.Ceiling(int.Parse(result) / 10.0);
-
-            return count;
+            return GetTotalPages(total);
         }
 
 
@@ -173,14 +159,13 @@ namespace Heldom_SYS.Service
             string sql = @"SELECT * FROM Accident where AccidentID = @AccidentID";
 
 
-            IEnumerable<Accident>? data = await DataBase.QueryAsync<Accident>(sql,
+            Accident data = await DataBase.QueryFirstAsync<Accident>(sql,
                 new
                 {
                     AccidentID = id
                 });
 
-
-            return data.First();
+            return data;
         }
 
 
@@ -212,31 +197,27 @@ namespace Heldom_SYS.Service
             // 尋找並生成最新ID
             string checkIDSql = @"SELECT TOP 1 AccidentID FROM Accident ORDER BY AccidentID DESC";
 
-            IEnumerable<MaxData>? dataID = await DataBase.QueryAsync<MaxData>(checkIDSql);
-
-            string resultID = dataID.Select(x => x.AccidentID).ToList().First().ToString();
-            int count = int.Parse(resultID.Substring(2)) + 1;
-            string AccidentID = (Id == "000" ?  ("AC" + count.ToString().PadLeft(3, '0')) : Id);
+            string? latestAccidentId = await DataBase.QueryFirstOrDefaultAsync<string>(checkIDSql);
+            string AccidentID = Id == "000" ? GenerateNextPrefixedId(latestAccidentId, "AC", 3) : Id;
 
             // 尋找上司
             string checkIncidentSql = @"SELECT ImmediateSupervisor FROM EmployeeDetail where EmployeeID = @EmployeeID";
-            IEnumerable<IncidentData>? dataIncident = await DataBase.QueryAsync<IncidentData>(checkIncidentSql, new
+            string? immediateSupervisor = await DataBase.QueryFirstOrDefaultAsync<string>(checkIncidentSql, new
             {
                 EmployeeID = UserRoleStore.UserID
             });
 
             string resultIncident = "";
-            var findItem = dataIncident.Select(x => x.ImmediateSupervisor).ToList().First();
-            if (UserRoleStore.GetRole() != "A" && !findItem.IsNullOrEmpty())
+            if (UserRoleStore.GetRole() != "A" && !string.IsNullOrEmpty(immediateSupervisor))
             {
-                resultIncident = findItem.ToString();
+                resultIncident = immediateSupervisor;
             }
 
             string addSql = @"INSERT INTO Accident 
             ([AccidentID], [AccidentType], [AccidentTitle], [Description], [StartTime], [EmployeeID], [UploadTime], [IncidentControllerID], [Response], [IncidentStatus]) VALUES
             (@AccidentID, @AccidentType, @AccidentTitle, @Description, @StartTime, @EmployeeID, @StartTime, @IncidentControllerID, null, 0)";
 
-            int? dataAdd = await DataBase.QuerySingleOrDefaultAsync<int>(addSql, new
+            await DataBase.ExecuteAsync(addSql, new
             {
                 AccidentID = AccidentID,
                 AccidentType = AccidentType,
@@ -251,7 +232,7 @@ namespace Heldom_SYS.Service
 
             string delSql = @"DELETE FROM AccidentFile WHERE AccidentID = @AccidentID and ResponseType = @ResponseType";
 
-            await DataBase.QuerySingleOrDefaultAsync<int>(delSql, new
+            await DataBase.ExecuteAsync(delSql, new
             {
                 AccidentID = AccidentID,
                 ResponseType = false
@@ -260,9 +241,7 @@ namespace Heldom_SYS.Service
             // 尋找並生成最新ID
             string checkFileIDSql = @"SELECT TOP 1 FileID FROM AccidentFile ORDER BY FileID DESC";
 
-            IEnumerable<MaxFileID>? dataFileID = await DataBase.QueryAsync<MaxFileID>(checkFileIDSql);
-
-            string resultFileID = dataFileID.Select(x => x.FileID).ToList().First().ToString();
+            string? resultFileID = await DataBase.QueryFirstOrDefaultAsync<string>(checkFileIDSql);
 
 
             if (Files == null || Files.Count == 0)
@@ -278,13 +257,12 @@ namespace Heldom_SYS.Service
 
                 byte[] fileBytes = Convert.FromBase64String(base64Data);
 
-                int resultFileIDToInt = int.Parse(resultFileID.Substring(1)) + i + 1;
-                string FileID = "F" + resultFileIDToInt.ToString().PadLeft(4, '0');
+                string FileID = GenerateNextPrefixedId(resultFileID, "F", 4, i + 1);
 
                 string addFileSql = @"INSERT INTO AccidentFile(FileID,AccidentID,FileImage,ResponseType)
                 VALUES (@FileID,@AccidentID,@FileImage,@ResponseType)";
 
-                await DataBase.QuerySingleOrDefaultAsync<int>(addFileSql, new
+                await DataBase.ExecuteAsync(addFileSql, new
                 {
                     FileID = FileID,
                     AccidentID = AccidentID,
@@ -305,7 +283,7 @@ namespace Heldom_SYS.Service
         {
             string sql = @"UPDATE Accident SET Response = @Response ,IncidentStatus = @IncidentStatus, EndTime = @EndTime WHERE AccidentID = @AccidentID";
 
-            await DataBase.QuerySingleOrDefaultAsync<int>(sql, new
+            await DataBase.ExecuteAsync(sql, new
             {
                 Response = Reply,
                 AccidentID = AccidentId,
@@ -315,7 +293,7 @@ namespace Heldom_SYS.Service
 
             string delSql = @"DELETE FROM AccidentFile WHERE AccidentID = @AccidentID and ResponseType = @ResponseType";
 
-            await DataBase.QuerySingleOrDefaultAsync<int>(delSql, new
+            await DataBase.ExecuteAsync(delSql, new
             {
                 AccidentID = AccidentId,
                 ResponseType = true
@@ -324,9 +302,7 @@ namespace Heldom_SYS.Service
             // 尋找並生成最新ID
             string checkIDSql = @"SELECT TOP 1 FileID FROM AccidentFile ORDER BY FileID DESC";
 
-            IEnumerable<MaxFileID>? dataID = await DataBase.QueryAsync<MaxFileID>(checkIDSql);
-
-            string resultID = dataID.Select(x => x.FileID).ToList().First().ToString();
+            string? resultID = await DataBase.QueryFirstOrDefaultAsync<string>(checkIDSql);
 
 
             if (Files == null || Files.Count == 0)
@@ -344,13 +320,12 @@ namespace Heldom_SYS.Service
                 byte[] fileBytes = Convert.FromBase64String(base64Data);
 
 
-                int count = int.Parse(resultID.Substring(1)) + i + 1;
-                string FileID = "F" + count.ToString().PadLeft(4, '0');
+                string FileID = GenerateNextPrefixedId(resultID, "F", 4, i + 1);
 
                 string addSql = @"INSERT INTO AccidentFile(FileID,AccidentID,FileImage,ResponseType)
                 VALUES (@FileID,@AccidentID,@FileImage,@ResponseType)";
 
-                await DataBase.QuerySingleOrDefaultAsync<int>(addSql, new
+                await DataBase.ExecuteAsync(addSql, new
                 {
                     FileID = FileID,
                     AccidentID = AccidentId,
@@ -375,6 +350,21 @@ namespace Heldom_SYS.Service
             return rowsAffected + rowsFileAffected;
         }
 
+        private static int GetTotalPages(int total)
+        {
+            return (int)Math.Ceiling(total / (double)PageSize);
+        }
+
+        private static string GenerateNextPrefixedId(string? latestId, string prefix, int digits, int increment = 1)
+        {
+            int current = 0;
+            if (!string.IsNullOrEmpty(latestId) && latestId.StartsWith(prefix) && latestId.Length > prefix.Length)
+            {
+                int.TryParse(latestId[prefix.Length..], out current);
+            }
+
+            return prefix + (current + increment).ToString().PadLeft(digits, '0');
+        }
 
     }
 }

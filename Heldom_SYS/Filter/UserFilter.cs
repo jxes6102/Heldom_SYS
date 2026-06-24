@@ -1,11 +1,8 @@
-﻿using Heldom_SYS.Interface;
+using Heldom_SYS.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.Cms;
-using static NPOI.HSSF.Util.HSSFColor;
 
 namespace Heldom_SYS.Filter
 {
@@ -23,6 +20,10 @@ namespace Heldom_SYS.Filter
             //var headers = context.HttpContext.Request.Headers;
             //var Routers = context.RouteData.Routers;
             //var Values = context.RouteData.Values;
+
+            UserRoleStore.UserID = context.HttpContext.Session.GetString("UserID") ?? "";
+            UserRoleStore.UserName = context.HttpContext.Session.GetString("UserName") ?? "";
+            UserRoleStore.SetRole(context.HttpContext.Session.GetString("Role") ?? "X");
 
             string controller = context.RouteData.Values["controller"]?.ToString()?.ToLower() ?? "";
             string action = context.RouteData.Values["action"]?.ToString()?.ToLower() ?? "";

@@ -367,8 +367,8 @@ namespace Heldom_SYS.Controllers
                     Console.WriteLine("找不到對應的藍圖");
                 }
                 //Console.WriteLine("最新: "+latestBlueprint.BlueprintId);
-                string BlueprintID="預設ID";
-                if (latestBlueprint.BlueprintId.Length < 6)
+                string BlueprintID = "B0001";
+                if (latestBlueprint != null && latestBlueprint.BlueprintId.Length < 6)
                 {
                     string tempId = latestBlueprint.BlueprintId.Substring(1); // B   0050
                     //Console.WriteLine("BPid: "+tempId);

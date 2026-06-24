@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Heldom_SYS.Interface;
 using Heldom_SYS.Models;
 using MathNet.Numerics;
@@ -28,6 +28,7 @@ namespace Heldom_SYS.Controllers
 
         public IActionResult Index()
         {
+            HttpContext.Session.Clear();
             UserRoleStore.UserID = "";
             UserRoleStore.UserName = "";
             UserRoleStore.SetRole("X");
@@ -77,22 +78,24 @@ namespace Heldom_SYS.Controllers
                 }
                 else {
                     string checkID = @"SELECT top(1) EmployeeID FROM Employee where PositionRole = 'P' order by EmployeeID Desc";
-                    IEnumerable<PIDData> ? PIDData = await DataBase.QueryAsync<PIDData>(checkID);
-
-                    // 新增最新PID
-                    string resultID = PIDData.Select(x => x.EmployeeID).ToList().First().ToString();
-                    int count = int.Parse(resultID.Substring(1)) + 1;
+                    string? resultID = await DataBase.QueryFirstOrDefaultAsync<string>(checkID);
+                    int count = 1;
+                    if (!string.IsNullOrEmpty(resultID) && resultID.Length > 1)
+                    {
+                        int.TryParse(resultID.Substring(1), out count);
+                        count++;
+                    }
                     string EmployeeID = "P" + count.ToString().PadLeft(5, '0');
 
 
                     string addEmployeeSql = @"INSERT INTO Employee (EmployeeID,IsActive,Position,PositionRole,HireDate,ResignationDate)
                                 VALUES (@EmployeeID,@IsActive,@Position,@PositionRole,@HireDate,@ResignationDate)";
 
-                    await DataBase.QuerySingleOrDefaultAsync<int>(addEmployeeSql, new
+                    await DataBase.ExecuteAsync(addEmployeeSql, new
                     {
                         EmployeeID = EmployeeID,
                         IsActive = false,
-                        Position = "臨時員工",
+                        Position = "�{�ɭ��u",
                         PositionRole = "P",
                         HireDate = DateTime.Now,
                         ResignationDate = DateTime.Now,
@@ -102,7 +105,7 @@ namespace Heldom_SYS.Controllers
                     string addTemporarierSql = @"INSERT INTO Temporarier(EmployeeID,EmployeeName,PhoneNumber,CompanyID) 
                                             VALUES  (@EmployeeID,@EmployeeName,@PhoneNumber,@CompanyID)";
 
-                    await DataBase.QuerySingleOrDefaultAsync<int>(addTemporarierSql, new
+                    await DataBase.ExecuteAsync(addTemporarierSql, new
                     {
                         EmployeeID = EmployeeID,
                         EmployeeName = data.Account,

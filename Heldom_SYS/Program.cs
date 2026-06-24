@@ -26,7 +26,7 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 builder.Services.AddControllersWithViews();
 
 // 添加 role 服務
-builder.Services.AddSingleton<IUserStoreService, UserStoreService>();
+builder.Services.AddScoped<IUserStoreService, UserStoreService>();
 
 //  加入 Session 設定
 builder.Services.AddDistributedMemoryCache();
@@ -36,8 +36,6 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-
-builder.Services.AddSession(); // 啟用 Session
 
 builder.Services.AddScoped<IAccidentService, AccidentService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
