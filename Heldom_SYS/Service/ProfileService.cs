@@ -3,14 +3,10 @@ using Dapper;
 using Heldom_SYS.CustomModel;
 using Heldom_SYS.Interface;
 using Heldom_SYS.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using NPOI.HSSF.Record.Chart;
-using NPOI.SS.Formula.Functions;
-using static Heldom_SYS.Controllers.ProfileController;
-using static Heldom_SYS.Service.AccidentService;
+using System.Data;
 
 namespace Heldom_SYS.Service
 {
@@ -19,11 +15,14 @@ namespace Heldom_SYS.Service
         private readonly SqlConnection DataBase;
         private readonly IUserStoreService UserRoleStore;
         private readonly ConstructionDbContext DbContext;
-        public ProfileService(SqlConnection connection, IUserStoreService _UserRoleStore, ConstructionDbContext dbContext)
+        private readonly ILogger<ProfileService> Logger;
+
+        public ProfileService(SqlConnection connection, IUserStoreService _UserRoleStore, ConstructionDbContext dbContext, ILogger<ProfileService> logger)
         {
             DataBase = connection;
             UserRoleStore = _UserRoleStore;
             DbContext = dbContext;
+            Logger = logger;
         }
         
         // 查詢員工個人詳細資料
@@ -277,45 +276,51 @@ namespace Heldom_SYS.Service
         // 新增員工個人帳號資料
         public async Task<string> CreateAccount(GetNewAccountEditData userInput)
         {
+            await using var transaction = await DbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             try
             {
-                    string sqlCheck = "SELECT COUNT([PhoneNumber]) FROM EmployeeDetail WHERE PhoneNumber = @PhoneNumber";
-                    string sqlCheck2 = "SELECT COUNT([Mail]) FROM EmployeeDetail WHERE Mail = @Mail";
+                bool phoneExists = await DbContext.EmployeeDetails
+                    .AnyAsync(detail => detail.PhoneNumber == userInput.PhoneNumber);
 
-                    int checkResult = await DataBase.QueryFirstAsync<int>(sqlCheck,
-                            new
-                            {
-                                PhoneNumber = userInput.PhoneNumber
-                            });
+                bool mailExists = await DbContext.EmployeeDetails
+                    .AnyAsync(detail => detail.Mail == userInput.Mail);
 
-                    int checkResult2 = await DataBase.QueryFirstAsync<int>(sqlCheck2,
-                        new
-                        {
-                            Mail = userInput.Mail
-                        });
+                if (phoneExists)
+                {
+                    await transaction.RollbackAsync();
+                    return "電話號碼已存在!";
+                }
 
-                    if (checkResult != 0)
-                    {
-                        return "電話號碼已存在!";
-                    }else if(checkResult2 != 0)
-                    {
-                        return "電子信箱已存在！";
-                    }
+                if (mailExists)
+                {
+                    await transaction.RollbackAsync();
+                    return "電子信箱已存在！";
+                }
+
+                string? latestEmployeeId = await DbContext.Employees
+                    .Where(employee => employee.EmployeeId.StartsWith("E"))
+                    .OrderByDescending(employee => employee.EmployeeId)
+                    .Select(employee => employee.EmployeeId)
+                    .FirstOrDefaultAsync();
+
+                string employeeId = GenerateNextPrefixedId(latestEmployeeId, "E", 5);
                 
-                    var employee = new Employee
-                    {
-                        EmployeeId = userInput.EmployeeId,
-                        IsActive = userInput.IsActive,
-                        Position = userInput.Position,
-                        PositionRole = userInput.PositionRole,
-                        HireDate = userInput.HireDate,
-                        ResignationDate = userInput.ResignationDate
-                    };
+                var employee = new Employee
+                {
+                    EmployeeId = employeeId,
+                    IsActive = userInput.IsActive,
+                    Position = userInput.Position,
+                    PositionRole = userInput.PositionRole,
+                    HireDate = userInput.HireDate,
+                    ResignationDate = userInput.ResignationDate
+                };
 
-                await DbContext.Employees.AddAsync(employee);
+                DbContext.Employees.Add(employee);
                 int affectedRows = await DbContext.SaveChangesAsync();
                 if (affectedRows == 0)
                 {
+                    await transaction.RollbackAsync();
                     return "Employee表格建立失敗！";
                 }
 
@@ -325,7 +330,7 @@ namespace Heldom_SYS.Service
 
                     var employeeDetail = new EmployeeDetail
                     {
-                        EmployeeId = userInput.EmployeeId,
+                        EmployeeId = employeeId,
                         Department = userInput.Department,
                         ImmediateSupervisor = (userInput.ImmediateSupervisor == "總經理" ? null: userInput.ImmediateSupervisor),
                         EmployeePhoto = photo,
@@ -342,23 +347,29 @@ namespace Heldom_SYS.Service
                         AnnualLeave = (byte)userInput.AnnualLeave
                     };
 
-                    await DbContext.EmployeeDetails.AddAsync(employeeDetail);
+                    DbContext.EmployeeDetails.Add(employeeDetail);
                     affectedRows = await DbContext.SaveChangesAsync();
                     if (affectedRows == 0)
                     {
+                        await transaction.RollbackAsync();
                         return "EmployeeDetail表格建立失敗！";
                     }
+
+                    await transaction.CommitAsync();
                     return "員工檔案建立成功！";
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("EmployeeDetail表格更新失敗: " + ex.Message);
+                    Logger.LogError(ex, "Failed to create employee detail for generated employee {EmployeeId}", employeeId);
+                    throw;
                 }
             }
 
             catch (Exception ex)
             {
-                throw new Exception("Employee表格更新失敗: " + ex.Message);
+                await transaction.RollbackAsync();
+                Logger.LogError(ex, "Failed to create employee account");
+                throw;
             }
         }
 
@@ -406,6 +417,9 @@ namespace Heldom_SYS.Service
 
         public async Task<string> UpdateAccount(GetNewAccountEditData userInput)
         {
+            await EnsureConnectionOpenAsync();
+            using var transaction = DataBase.BeginTransaction(IsolationLevel.Serializable);
+
             try
             {
                 string sql = "UPDATE Employee SET [IsActive] = @IsActive," +
@@ -441,21 +455,23 @@ namespace Heldom_SYS.Service
                         {
                             PhoneNumber = userInput.PhoneNumber,
                             EmployeeID = userInput.EmployeeId
-                        });
+                        }, transaction);
 
                     int checkResult2 = await DataBase.QueryFirstAsync<int>(sqlCheck2,
                         new
                         {
                             Mail = userInput.Mail,
                             EmployeeID = userInput.EmployeeId
-                        });
+                        }, transaction);
 
                     if (checkResult != 0)
                     {
+                        transaction.Rollback();
                         return "電話號碼已存在!";
                     }
                     else if (checkResult2 != 0)
                     {
+                        transaction.Rollback();
                         return "電子信箱已存在！";
                     }
 
@@ -468,10 +484,11 @@ namespace Heldom_SYS.Service
                             HireDate = userInput.HireDate,
                             ResignationDate = userInput.ResignationDate,
                             EmployeeID = userInput.EmployeeId
-                        });
+                        }, transaction);
 
                     if (rowsAffected == 0)
                     {
+                        transaction.Rollback();
                         return "Employee表格更新失敗！";
                     }
 
@@ -493,24 +510,48 @@ namespace Heldom_SYS.Service
                             EmergencyContactPhone = userInput.EmergencyContactPhone,
                             AnnualLeave = userInput.AnnualLeave,
                             EmployeeID = userInput.EmployeeId
-                        });
+                        }, transaction);
 
                     if (rowsAffected == 0)
                     {
+                        transaction.Rollback();
                         return "EmployeeDetail表格更新失敗！";
                     }
 
+                    transaction.Commit();
                     return "資料更新完畢！";
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception("資料取得失敗: " + ex.Message);
+                    transaction.Rollback();
+                    Logger.LogError(ex, "Failed to update employee account {EmployeeId}", userInput.EmployeeId);
+                    throw;
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception("更新失敗: " + ex.Message);
+                Logger.LogError(ex, "Failed to update employee account {EmployeeId}", userInput.EmployeeId);
+                throw;
             }
+        }
+
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (DataBase.State != ConnectionState.Open)
+            {
+                await DataBase.OpenAsync();
+            }
+        }
+
+        private static string GenerateNextPrefixedId(string? latestId, string prefix, int digits)
+        {
+            int current = 0;
+            if (!string.IsNullOrEmpty(latestId) && latestId.StartsWith(prefix) && latestId.Length > prefix.Length)
+            {
+                int.TryParse(latestId[prefix.Length..], out current);
+            }
+
+            return prefix + (current + 1).ToString().PadLeft(digits, '0');
         }
     }
 }

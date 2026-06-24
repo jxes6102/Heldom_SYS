@@ -13,6 +13,7 @@ using NPOI.SS.Formula.Functions;
 using System.Reflection;
 using System;
 using Heldom_SYS.CustomModel;
+using System.Data;
 
 namespace Heldom_SYS.Controllers
 {
@@ -20,10 +21,13 @@ namespace Heldom_SYS.Controllers
     {
         private readonly SqlConnection DataBase;
         private readonly IUserStoreService UserRoleStore;
-        public LoginController(SqlConnection connection, IUserStoreService _UserRoleStore)
+        private readonly ILogger<LoginController> Logger;
+
+        public LoginController(SqlConnection connection, IUserStoreService _UserRoleStore, ILogger<LoginController> logger)
         {
             DataBase = connection;
             UserRoleStore = _UserRoleStore;
+            Logger = logger;
         }
 
         public IActionResult Index()
@@ -77,44 +81,57 @@ namespace Heldom_SYS.Controllers
                     UserRoleStore.UserName = user.EmployeeName;
                 }
                 else {
-                    string checkID = @"SELECT top(1) EmployeeID FROM Employee where PositionRole = 'P' order by EmployeeID Desc";
-                    string? resultID = await DataBase.QueryFirstOrDefaultAsync<string>(checkID);
-                    int count = 1;
-                    if (!string.IsNullOrEmpty(resultID) && resultID.Length > 1)
+                    await EnsureConnectionOpenAsync();
+                    using var transaction = DataBase.BeginTransaction(IsolationLevel.Serializable);
+
+                    try
                     {
-                        int.TryParse(resultID.Substring(1), out count);
-                        count++;
-                    }
-                    string EmployeeID = "P" + count.ToString().PadLeft(5, '0');
+                        string checkID = @"SELECT top(1) EmployeeID FROM Employee WITH (UPDLOCK, HOLDLOCK) where PositionRole = 'P' order by EmployeeID Desc";
+                        string? resultID = await DataBase.QueryFirstOrDefaultAsync<string>(checkID, transaction: transaction);
+                        int count = 1;
+                        if (!string.IsNullOrEmpty(resultID) && resultID.Length > 1)
+                        {
+                            int.TryParse(resultID.Substring(1), out count);
+                            count++;
+                        }
+                        string EmployeeID = "P" + count.ToString().PadLeft(5, '0');
 
 
-                    string addEmployeeSql = @"INSERT INTO Employee (EmployeeID,IsActive,Position,PositionRole,HireDate,ResignationDate)
+                        string addEmployeeSql = @"INSERT INTO Employee (EmployeeID,IsActive,Position,PositionRole,HireDate,ResignationDate)
                                 VALUES (@EmployeeID,@IsActive,@Position,@PositionRole,@HireDate,@ResignationDate)";
 
-                    await DataBase.ExecuteAsync(addEmployeeSql, new
-                    {
-                        EmployeeID = EmployeeID,
-                        IsActive = false,
-                        Position = "臨時員工",
-                        PositionRole = "P",
-                        HireDate = DateTime.Now,
-                        ResignationDate = DateTime.Now,
-                    });
+                        await DataBase.ExecuteAsync(addEmployeeSql, new
+                        {
+                            EmployeeID = EmployeeID,
+                            IsActive = false,
+                            Position = "臨時員工",
+                            PositionRole = "P",
+                            HireDate = DateTime.Now,
+                            ResignationDate = DateTime.Now,
+                        }, transaction);
 
 
-                    string addTemporarierSql = @"INSERT INTO Temporarier(EmployeeID,EmployeeName,PhoneNumber,CompanyID) 
+                        string addTemporarierSql = @"INSERT INTO Temporarier(EmployeeID,EmployeeName,PhoneNumber,CompanyID) 
                                             VALUES  (@EmployeeID,@EmployeeName,@PhoneNumber,@CompanyID)";
 
-                    await DataBase.ExecuteAsync(addTemporarierSql, new
-                    {
-                        EmployeeID = EmployeeID,
-                        EmployeeName = data.Account,
-                        PhoneNumber = data.PassWord,
-                        CompanyID = data.CompanyID,
-                    });
+                        await DataBase.ExecuteAsync(addTemporarierSql, new
+                        {
+                            EmployeeID = EmployeeID,
+                            EmployeeName = data.Account,
+                            PhoneNumber = data.PassWord,
+                            CompanyID = data.CompanyID,
+                        }, transaction);
 
-                    UserRoleStore.UserID = EmployeeID;
-                    UserRoleStore.UserName = data.Account;
+                        transaction.Commit();
+                        UserRoleStore.UserID = EmployeeID;
+                        UserRoleStore.UserName = data.Account;
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        Logger.LogError(ex, "Failed to create temporary worker account for {EmployeeName}", data.Account);
+                        return StatusCode(500, new { message = "臨時員工建立失敗" });
+                    }
 
                 }
 
@@ -175,6 +192,13 @@ namespace Heldom_SYS.Controllers
             string jsonResponse = JsonConvert.SerializeObject(response, Formatting.Indented);
             return Content(jsonResponse, "application/json");
 
+        }
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (DataBase.State != ConnectionState.Open)
+            {
+                await DataBase.OpenAsync();
+            }
         }
 
     }

@@ -23,9 +23,12 @@ namespace Heldom_SYS.Controllers
     public class AccidentController : Controller
     {
         private readonly IAccidentService AccidentService;
-        public AccidentController(IAccidentService _AccidentService)
+        private readonly ILogger<AccidentController> Logger;
+
+        public AccidentController(IAccidentService _AccidentService, ILogger<AccidentController> logger)
         {
             AccidentService = _AccidentService;
+            Logger = logger;
         }
 
 
@@ -48,7 +51,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error);
+                Logger.LogError(error, "Failed to get accident report");
                 response.data = "拿取失敗";
             }
 
@@ -77,7 +80,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error);
+                Logger.LogError(error, "Failed to get accident tracking data");
                 response.data = "拿取失敗";
             }
 
@@ -108,7 +111,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error);
+                Logger.LogError(error, "Failed to get accident detail {AccidentId}", data.ID);
                 response.data = "拿取失敗";
             }
 
@@ -148,7 +151,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error);
+                Logger.LogError(error, "Failed to add accident");
                 response.data = "新增失敗";
             }
 
@@ -189,7 +192,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error);
+                Logger.LogError(error, "Failed to add accident reply {AccidentId}", AccidentId);
                 response.data = "修改失敗";
 
             }
@@ -220,7 +223,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error);
+                Logger.LogError(error, "Failed to delete accident {AccidentId}", data.ID);
                 response.data = "拿取失敗";
             }
 

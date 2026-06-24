@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Data;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Dapper;
@@ -22,6 +23,7 @@ namespace Heldom_SYS.Controllers
         //BP
         private readonly ConstructionDbContext db ;
         private readonly SqlConnection DataBase;
+        private readonly ILogger<ProjectController> Logger;
         public class UsePrintCategary
         {
             public required string  categaryID { get; set; }
@@ -61,11 +63,12 @@ namespace Heldom_SYS.Controllers
 
         //紀錄當前人員UserRoleStore
         private readonly IUserStoreService UserRoleStore;
-        public ProjectController(SqlConnection connection,ConstructionDbContext _db,IUserStoreService _UserRoleStore)
+        public ProjectController(SqlConnection connection,ConstructionDbContext _db,IUserStoreService _UserRoleStore, ILogger<ProjectController> logger)
         {
             DataBase = connection;
             db = _db;
             UserRoleStore = _UserRoleStore;
+            Logger = logger;
         }
 
         public IActionResult Issues(string type, string id, string motion)
@@ -140,8 +143,7 @@ namespace Heldom_SYS.Controllers
 
         public IActionResult Blueprints(string id)
         {
-            Console.WriteLine($"傳入 id: {id}");
-            Console.WriteLine($"Session 內的 Keys: {string.Join(", ", HttpContext.Session.Keys)}");
+            Logger.LogDebug("Loading blueprints for category {CategoryId}. Session keys: {SessionKeys}", id, string.Join(", ", HttpContext.Session.Keys));
 
             TempData["toEdit"] = "BP";
 
@@ -162,12 +164,12 @@ namespace Heldom_SYS.Controllers
                 else
                 {
                     // Session 內沒有該 id 的資料
-                    Console.WriteLine($"Session 沒有找到 key: {id}");
+                    Logger.LogDebug("Session key {CategoryId} was not found", id);
                 }
             }
             else
             {
-                Console.WriteLine("id 不能為 null 或空字串");
+                Logger.LogDebug("Blueprint category id is empty");
             }
             //使用者當前藍圖種類usedCategary
             HttpContext.Session.SetString("usedCategary", JsonConvert.SerializeObject(id));
@@ -231,21 +233,27 @@ namespace Heldom_SYS.Controllers
             }
             try
             {
+                await EnsureConnectionOpenAsync();
+                using var transaction = DataBase.BeginTransaction();
+
                 string sql = @"update Blueprint set PrintStatus = 0
                     where [PrintCategoryID] =@id and BlueprintName = @BPName and BlueprintVersion = @changedVersion
                                     update Blueprint set PrintStatus = 1 
                     where [PrintCategoryID] =@id and BlueprintName =@BPName and BlueprintVersion = @changingVersion";
 
-                    await DataBase.QueryFirstOrDefaultAsync<ChangeStatusData>(sql, new { 
+                    await DataBase.ExecuteAsync(sql, new { 
                     id=data.id,
                     BPName=data.BPName, 
                     changedVersion = data.changedVersion, 
-                    changingVersion = data.changingVersion });
+                    changingVersion = data.changingVersion }, transaction);
+
+                transaction.Commit();
                 return Ok();
             }
             catch (Exception ex)
             {
                 // 捕獲並返回詳細錯誤訊息
+                Logger.LogError(ex, "Failed to change active blueprint for category {CategoryId}, blueprint {BlueprintName}", data.id, data.BPName);
                 return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
@@ -340,16 +348,13 @@ namespace Heldom_SYS.Controllers
             {
                 return BadRequest(new { message = "請求資料為空" });
             }
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
                 //vers
-                Console.WriteLine("vers type: " + (data.vers));
+                Logger.LogDebug("Parsing blueprint version {Version}", data.vers);
 
-                if (decimal.TryParse(data.vers, out decimal versionDecimal))
-                {
-                    Console.WriteLine("成功轉換 data.vers 為 decimal");
-                }
-                else
+                if (!decimal.TryParse(data.vers, out decimal versionDecimal))
                 {
                     throw new Exception("版本號格式錯誤，請輸入有效的數值");
                 }
@@ -358,45 +363,16 @@ namespace Heldom_SYS.Controllers
                 var latestBlueprint = await db.Blueprints
                     .OrderByDescending(b => b.BlueprintId) // 假設有 Version 欄位
                     .FirstOrDefaultAsync();
-                if (latestBlueprint != null)
-                {
-                    Console.WriteLine( latestBlueprint.BlueprintId);
-                }
-                else
-                {
-                    Console.WriteLine("找不到對應的藍圖");
-                }
-                //Console.WriteLine("最新: "+latestBlueprint.BlueprintId);
-                string BlueprintID = "B0001";
-                if (latestBlueprint != null && latestBlueprint.BlueprintId.Length < 6)
-                {
-                    string tempId = latestBlueprint.BlueprintId.Substring(1); // B   0050
-                    //Console.WriteLine("BPid: "+tempId);
+                string BlueprintID = GenerateNextPrefixedId(latestBlueprint?.BlueprintId, "B", 4);
 
-                    // 將數字部分轉換為整數並加 1
-                    int numericId = Convert.ToInt32(tempId) + 1;
-                    // 將數字部分轉回字串，並補足 0 至 4 位數
-                    string formattedId = numericId.ToString().PadLeft(4, '0');
-                    // 組合成新的 BlueprintID
-                     BlueprintID = "B" + formattedId;
-                    //Console.WriteLine("BPid after transformation: " + BlueprintID);
-
-                }
                 // --------------判斷version是否重複--------------
-                var checkVersions = await db.Blueprints
-                .Where(b => b.PrintCategoryId == data.id && b.BlueprintName == data.BPName) // 篩選條件
-                .OrderByDescending(b => b.BlueprintVersion) // 版本排序 大=>小
-                .ToListAsync(); // 將結果轉為 List
+                bool versionExists = await db.Blueprints
+                    .AnyAsync(b => b.PrintCategoryId == data.id && b.BlueprintName == data.BPName && b.BlueprintVersion == versionDecimal);
 
-                foreach (var bp in checkVersions)
+                if (versionExists)
                 {
-                    if(bp.BlueprintVersion== versionDecimal)
-                    {
-                        //return Ok("version"+ versionDecimal + " 重複");
-                        //return Ok("version"+ data.id + " 重複");
-                        return Ok("1");
-
-                    }
+                    await transaction.RollbackAsync();
+                    return Ok("1");
                 }
 
                 // --------------新增--------------
@@ -444,8 +420,9 @@ namespace Heldom_SYS.Controllers
 
 
                 // 加入 DbContext
-                await db.Blueprints.AddAsync(newPrint);
+                db.Blueprints.Add(newPrint);
                 await db.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 return Ok();
 
@@ -453,12 +430,33 @@ namespace Heldom_SYS.Controllers
             catch (Exception ex)
             {
                 // 捕獲並返回詳細錯誤訊息
+                await transaction.RollbackAsync();
+                Logger.LogError(ex, "Failed to insert blueprint for category {CategoryId}, blueprint {BlueprintName}", data.id, data.BPName);
                 return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
         public IActionResult BlueprintsEdit()
         {
             return View();
+        }
+
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (DataBase.State != ConnectionState.Open)
+            {
+                await DataBase.OpenAsync();
+            }
+        }
+
+        private static string GenerateNextPrefixedId(string? latestId, string prefix, int digits)
+        {
+            int current = 0;
+            if (!string.IsNullOrEmpty(latestId) && latestId.StartsWith(prefix) && latestId.Length > prefix.Length)
+            {
+                int.TryParse(latestId[prefix.Length..], out current);
+            }
+
+            return prefix + (current + 1).ToString().PadLeft(digits, '0');
         }
 
 

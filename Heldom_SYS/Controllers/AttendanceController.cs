@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.Formula.Functions;
+using System.Data;
 
 namespace Heldom_SYS.Controllers
 {
@@ -14,12 +15,14 @@ namespace Heldom_SYS.Controllers
         private readonly SqlConnection DataBase;
         private readonly ConstructionDbContext _context;
         private readonly IAttendanceExcelService AttendanceExcelService;
+        private readonly ILogger<AttendanceController> Logger;
 
-        public AttendanceController(SqlConnection connection, ConstructionDbContext context, IAttendanceExcelService _AttendanceExcelService)
+        public AttendanceController(SqlConnection connection, ConstructionDbContext context, IAttendanceExcelService _AttendanceExcelService, ILogger<AttendanceController> logger)
         {
             DataBase = connection;
             _context = context;
             AttendanceExcelService = _AttendanceExcelService;
+            Logger = logger;
         }
 
         [Route("Records")]
@@ -76,43 +79,58 @@ namespace Heldom_SYS.Controllers
                 return Json(new { success = false, message = "EmployeeId is required." });
             }
 
-            string checkInSql = @"SELECT COUNT(*) FROM AttendanceRecord
+            await EnsureConnectionOpenAsync();
+            using var transaction = DataBase.BeginTransaction(IsolationLevel.Serializable);
+
+            try
+            {
+                string checkInSql = @"SELECT COUNT(*) FROM AttendanceRecord WITH (UPDLOCK, HOLDLOCK)
                           WHERE EmployeeID = @EmployeeID AND WorkDate = @WorkDate";
-            var existingCheckInCount = await DataBase.ExecuteScalarAsync<int>(checkInSql, new
-            {
-                EmployeeID = employeeId,
-                WorkDate = DateTime.Now.Date
-            });
+                var existingCheckInCount = await DataBase.ExecuteScalarAsync<int>(checkInSql, new
+                {
+                    EmployeeID = employeeId,
+                    WorkDate = DateTime.Now.Date
+                }, transaction);
 
-            if (existingCheckInCount > 0)
-            {
-                return Json(new { success = false, message = "今天已簽到" });
-            }
+                if (existingCheckInCount > 0)
+                {
+                    transaction.Rollback();
+                    return Json(new { success = false, message = "今天已簽到" });
+                }
 
-            string sql = "SELECT TOP 1 AttendanceID FROM AttendanceRecord ORDER BY AttendanceID DESC";
-            var lastAttendanceId = await DataBase.QueryFirstOrDefaultAsync<string>(sql);
-            string nextAttendanceId = GenerateNextAttendanceId(lastAttendanceId);
+                string sql = "SELECT TOP 1 AttendanceID FROM AttendanceRecord WITH (UPDLOCK, HOLDLOCK) ORDER BY AttendanceID DESC";
+                var lastAttendanceId = await DataBase.QueryFirstOrDefaultAsync<string>(sql, transaction: transaction);
+                string nextAttendanceId = GenerateNextAttendanceId(lastAttendanceId);
 
-            var checkInTime = DateTime.Now;
+                var checkInTime = DateTime.Now;
 
-            sql = @"
+                sql = @"
         INSERT INTO AttendanceRecord (AttendanceID, EmployeeID, WorkDate, CheckInTime)
         VALUES (@AttendanceID, @EmployeeID, @WorkDate, @CheckInTime)";
 
-            var result = await DataBase.ExecuteAsync(sql, new
-            {
-                AttendanceID = nextAttendanceId,
-                EmployeeID = employeeId,
-                WorkDate = checkInTime.Date,
-                CheckInTime = checkInTime
-            });
+                var result = await DataBase.ExecuteAsync(sql, new
+                {
+                    AttendanceID = nextAttendanceId,
+                    EmployeeID = employeeId,
+                    WorkDate = checkInTime.Date,
+                    CheckInTime = checkInTime
+                }, transaction);
 
-            if (result > 0)
-            {
-                return Json(new { success = true, message = "簽到成功" });
+                if (result > 0)
+                {
+                    transaction.Commit();
+                    return Json(new { success = true, message = "簽到成功" });
+                }
+
+                transaction.Rollback();
+                return Json(new { success = false, message = "Failed to record attendance." });
             }
-
-            return Json(new { success = false, message = "Failed to record attendance." });
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                Logger.LogError(ex, "Failed to check in employee {EmployeeId}", employeeId);
+                return Json(new { success = false, message = "Failed to record attendance." });
+            }
         }
 
         [Route("CheckOut")]
@@ -261,7 +279,7 @@ namespace Heldom_SYS.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"請假申請錯誤: {ex.Message}");
+                Logger.LogError(ex, "Failed to create leave request for employee {EmployeeId}", employeeId);
                 return Json(new { success = false, message = $"伺服器錯誤: {ex.Message}" });
             }
         }
@@ -437,26 +455,25 @@ namespace Heldom_SYS.Controllers
         {
             try
             {
-                Console.WriteLine($"收到更新請求: employeeId={employeeId}, startTime={startTime}, approve={approve}");
+                Logger.LogDebug("Updating leave status. employeeId={EmployeeId}, startTime={StartTime}, approve={Approve}", employeeId, startTime, approve);
 
                 var leaveRecord = await _context.LeaveRecords
                     .FirstOrDefaultAsync(lr => lr.EmployeeId == employeeId && lr.StartTime == startTime);
 
                 if (leaveRecord == null)
                 {
-                    Console.WriteLine("找不到記錄");
+                    Logger.LogDebug("Leave record was not found. employeeId={EmployeeId}, startTime={StartTime}", employeeId, startTime);
                     return Json(new { success = false, message = "找不到該請假記錄" });
                 }
 
                 leaveRecord.LeaveStatus = approve;
                 await _context.SaveChangesAsync();
 
-                Console.WriteLine("更新成功");
                 return Json(new { success = true, message = approve ? "已核准請假" : "已拒絕請假" });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"更新失敗: {ex.Message}");
+                Logger.LogError(ex, "Failed to update leave status. employeeId={EmployeeId}, startTime={StartTime}", employeeId, startTime);
                 return Json(new { success = false, message = $"伺服器錯誤: {ex.Message}" });
             }
         }
@@ -513,6 +530,14 @@ namespace Heldom_SYS.Controllers
             {
                 FileDownloadName = "GetLeaveRecordsFile.xlsx"
             };
+        }
+
+        private async Task EnsureConnectionOpenAsync()
+        {
+            if (DataBase.State != ConnectionState.Open)
+            {
+                await DataBase.OpenAsync();
+            }
         }
 
     }
